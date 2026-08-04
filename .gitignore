@@ -1,0 +1,25 @@
+# Dependency and package-manager state
+node_modules/
+
+# Plasmo build products and generated type metadata
+.plasmo/
+build/
+
+# Test output
+coverage/
+
+# Local environment files may contain backend configuration or secrets
+.env
+.env.*
+!.env.example
+
+# Packaged extension artifacts
+*.zip
+*.crx
+
+# Logs and local editor/operating-system metadata
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

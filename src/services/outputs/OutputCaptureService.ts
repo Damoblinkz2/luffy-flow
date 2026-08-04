@@ -1,0 +1,129 @@
+import { AutoflowError } from "~/errors/autoflow-error"
+import {
+  outputRecordSchema,
+  type AutoflowSettings,
+  type DetectedOutput,
+  type OutputRecord,
+} from "~/schemas"
+import { type OutputNamingService } from "~/services/naming/OutputNamingService"
+import type { QueueService } from "~/services/queue/QueueService"
+import type { OutputRepository, PromptRepository } from "~/storage/repositories/contracts"
+import { sha256Hex } from "~/utils/digest"
+import { createId } from "~/utils/ids"
+import type { Clock } from "~/utils/time"
+import { systemClock } from "~/utils/time"
+
+/** Usage tracking is a narrow port implemented by the Stage 4 subscription service. */
+export interface UsageEventTracker {
+  incrementUsage(idempotencyKey: string): Promise<unknown>
+}
+
+export type OutputNamingSettings = Pick<
+  AutoflowSettings,
+  "outputNamingPattern" | "sequencePadding" | "sequenceScope" | "defaultOutputFileFormat"
+>
+
+/** Output capture serializes deduplication, naming, usage, and prompt completion as a replay-safe flow. */
+export class OutputCaptureService {
+  private operation: Promise<void> = Promise.resolve()
+
+  constructor(
+    private readonly prompts: PromptRepository,
+    private readonly outputs: OutputRepository,
+    private readonly naming: OutputNamingService,
+    private readonly queue: QueueService,
+    private readonly usage: UsageEventTracker,
+    private readonly getNamingSettings: () => Promise<OutputNamingSettings>,
+    private readonly clock: Clock = systemClock,
+  ) {}
+
+  capture(promptId: string, detected: DetectedOutput): Promise<OutputRecord> {
+    return this.runExclusive(async () => {
+      const prompt = await this.prompts.getById(promptId)
+      if (prompt === null) {
+        throw new AutoflowError({
+          code: "OUTPUT_PROMPT_MISSING",
+          category: "storage_failure",
+          userMessage: "AutoFlow could not find the prompt for this output.",
+        })
+      }
+      const fingerprint = await sha256Hex(
+        `${prompt.id}:${prompt.platform}:${detected.platformOutputId ?? detected.fingerprintSource}`,
+      )
+      const existing = await this.outputs.getByFingerprint(fingerprint)
+      if (existing !== null) {
+        if (prompt.status !== "completed") {
+          await this.usage.incrementUsage(`output:${existing.id}`)
+          await this.queue.completePrompt(prompt.id, existing.id)
+        }
+        return existing
+      }
+
+      const generated = await this.naming.generate(prompt, detected, await this.getNamingSettings())
+      const now = this.clock.now().toISOString()
+      const record = outputRecordSchema.parse({
+        id: createId(),
+        promptId: prompt.id,
+        userId: prompt.userId,
+        platform: prompt.platform,
+        outputType: detected.type,
+        originalDetectedTitle: detected.detectedTitle,
+        sequenceNumber: generated.sequenceNumber,
+        generatedFilename: generated.filename,
+        textContent: detected.textContent,
+        sourceUrl: detected.sourceUrl,
+        thumbnailUrl: detected.thumbnailUrl,
+        mimeType: detected.mimeType,
+        fileExtension: extensionFromFilename(generated.filename),
+        metadata: detected.metadata,
+        fingerprint,
+        createdAt: detected.detectedAt,
+        updatedAt: now,
+        downloadStatus: "not_requested",
+        sessionId: prompt.sessionId,
+        revision: 0,
+        syncStatus: "local_only",
+      })
+      const saved = await this.outputs.createIfAbsent(record)
+      await this.usage.incrementUsage(`output:${saved.record.id}`)
+      await this.queue.completePrompt(prompt.id, saved.record.id)
+      return saved.record
+    })
+  }
+
+  async rename(
+    outputId: string,
+    expectedRevision: number,
+    requestedName: string,
+  ): Promise<OutputRecord> {
+    const output = await this.outputs.getById(outputId)
+    if (output === null) {
+      throw new AutoflowError({
+        code: "OUTPUT_NOT_FOUND",
+        category: "invalid_data",
+        userMessage: "The requested output no longer exists.",
+      })
+    }
+    const generatedFilename = await this.naming.rename(
+      output.generatedFilename,
+      requestedName,
+      output.id,
+    )
+    return this.outputs.update(output.id, expectedRevision, {
+      generatedFilename,
+      userDefinedName: generatedFilename,
+    })
+  }
+
+  private runExclusive<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
+    const result = this.operation.then(operation, operation)
+    this.operation = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
+  }
+}
+
+const extensionFromFilename = (filename: string): string =>
+  /\.[a-z0-9]{1,16}$/i.exec(filename)?.[0].toLowerCase() ?? ".bin"

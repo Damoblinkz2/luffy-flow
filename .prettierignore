@@ -1,0 +1,10 @@
+# Generated or third-party content should preserve its producer's formatting.
+.plasmo/
+build/
+coverage/
+node_modules/
+package-lock.json
+
+# Binary extension artifacts are not formatter inputs.
+*.zip
+*.crx
