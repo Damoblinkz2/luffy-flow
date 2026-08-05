@@ -56,7 +56,7 @@ export const createApplicationServices = (
   const keyValueStore = options.keyValueStore ?? new PlasmoKeyValueStore("local")
   const logger =
     options.logger ??
-    new Logger("autoflow", {
+    new Logger("luffyflow", {
       minimumLevel: config.appEnvironment === "development" ? "debug" : "info",
       privacyMode: true,
     })

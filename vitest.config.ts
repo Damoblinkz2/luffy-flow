@@ -18,7 +18,7 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     environmentOptions: {
       jsdom: {
-        url: "https://autoflow.test/",
+        url: "https://luffyflow.test/",
       },
     },
     clearMocks: true,

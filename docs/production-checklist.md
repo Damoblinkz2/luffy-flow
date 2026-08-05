@@ -1,6 +1,6 @@
-# AutoFlow production checklist
+# LuffyFlow production checklist
 
-This checklist is the release sign-off record for AutoFlow. A checked automated item is not a substitute for the unchecked manual, security, legal, privacy, or platform-compatibility gates.
+This checklist is the release sign-off record for LuffyFlow. A checked automated item is not a substitute for the unchecked manual, security, legal, privacy, or platform-compatibility gates.
 
 **Current version:** `0.1.0`  
 **Checklist updated:** 2026-08-04  
@@ -12,7 +12,7 @@ This checklist is the release sign-off record for AutoFlow. A checked automated 
 - [ ] Replace the `UNLICENSED` placeholder with the intended license or retain private distribution with documented authorization.
 - [ ] Confirm the package name, display name, version, description, and icon are final.
 - [ ] Update the version consistently in `package.json`, generated manifest, backend compatibility policy, and release notes.
-- [ ] Confirm AutoFlow naming and artwork do not infringe third-party trademarks.
+- [ ] Confirm LuffyFlow naming and artwork do not infringe third-party trademarks.
 - [ ] Record the source commit/tag used for the release.
 - [ ] Record dependency-lockfile integrity and archive the signed build provenance.
 

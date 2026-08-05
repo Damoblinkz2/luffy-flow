@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla"
 
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type { AuthService } from "~/services/auth/auth-service"
 import type { AuthSession, LoginRequest, SignupRequest } from "~/schemas/auth"
 
@@ -80,7 +80,7 @@ export const createAuthStore = (service: AuthService): StoreApi<AuthStoreState> 
   }))
 
 const messageFromError = (error: unknown): string =>
-  error instanceof AutoflowError
+  error instanceof LuffyflowError
     ? error.userMessage
     : error instanceof Error
       ? error.message

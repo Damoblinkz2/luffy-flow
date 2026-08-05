@@ -1,13 +1,13 @@
 import { z } from "zod"
 
-import { AutoflowError, toAutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError, toLuffyflowError } from "~/errors/luffyflow-error"
 import type { Logger } from "~/logging/logger"
 import type { TypedMessageClient } from "~/messaging/client"
 import type { TypedMessageRouter } from "~/messaging/router"
 import {
   detectedOutputSchema,
   queueStateSchema,
-  type AutoflowSettings,
+  type LuffyflowSettings,
   type QueueState,
 } from "~/schemas"
 import type { OutputCaptureService } from "~/services/outputs/OutputCaptureService"
@@ -31,7 +31,7 @@ export interface BackgroundQueueCoordinatorOptions {
   outputCapture: OutputCaptureService
   getAuthenticatedUserId(): Promise<string>
   authorizeStart(): Promise<string>
-  getSettings(): Promise<AutoflowSettings>
+  getSettings(): Promise<LuffyflowSettings>
   createContentClient(tabId: number): TypedMessageClient
   publishQueue(queue: QueueState): Promise<void>
   logger: Logger
@@ -193,7 +193,7 @@ export class BackgroundQueueCoordinator {
       router.register("prompt/status/changed", ["content"], async (message, sender) => {
         await this.verifyContentSender(message.payload.promptId, sender)
         if (message.payload.status !== "waiting_for_output") {
-          throw new AutoflowError({
+          throw new LuffyflowError({
             code: "CONTENT_STATUS_FORBIDDEN",
             category: "authorization",
             userMessage: "The content script cannot apply that prompt status.",
@@ -239,7 +239,7 @@ export class BackgroundQueueCoordinator {
           target: "content",
           payload: {
             commandId: interrupted.activeCommandId,
-            reason: "The AutoFlow background worker restarted.",
+            reason: "The LuffyFlow background worker restarted.",
           },
           responseSchema: z.void(),
         })
@@ -304,10 +304,10 @@ export class BackgroundQueueCoordinator {
         const settings = await this.options.getSettings()
         const adapterSettings = settings.platformAdapters[prompt.platform]
         if (!adapterSettings.enabled) {
-          throw new AutoflowError({
+          throw new LuffyflowError({
             code: "ADAPTER_DISABLED",
             category: "platform_unsupported",
-            userMessage: "Enable this platform adapter in AutoFlow settings before continuing.",
+            userMessage: "Enable this platform adapter in LuffyFlow settings before continuing.",
           })
         }
         const detected = await this.options.createContentClient(queue.targetTabId).send({
@@ -330,10 +330,10 @@ export class BackgroundQueueCoordinator {
         })
         await this.options.outputCapture.capture(prompt.id, detected)
       } catch (error) {
-        const normalized = toAutoflowError(error, {
+        const normalized = toLuffyflowError(error, {
           code: "PROMPT_AUTOMATION_FAILED",
           category: "submission_failure",
-          userMessage: "AutoFlow could not complete this prompt.",
+          userMessage: "LuffyFlow could not complete this prompt.",
           recoverable: true,
         })
         const shouldPause =
@@ -397,10 +397,10 @@ export class BackgroundQueueCoordinator {
   private async assertExpectedQueue(queueId: string, expectedRevision: number): Promise<void> {
     const queue = await this.requireCurrentQueue(queueId)
     if (queue.revision !== expectedRevision) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_REVISION_CONFLICT",
         category: "storage_failure",
-        userMessage: "The queue changed in another AutoFlow context. Refresh and try again.",
+        userMessage: "The queue changed in another LuffyFlow context. Refresh and try again.",
         recoverable: true,
       })
     }
@@ -409,7 +409,7 @@ export class BackgroundQueueCoordinator {
   private async requireCurrentQueue(queueId: string): Promise<QueueState> {
     const queue = await this.options.queues.getActive()
     if (queue === null || queue.id !== queueId) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_NOT_FOUND",
         category: "invalid_data",
         userMessage: "The requested queue no longer exists.",
@@ -439,10 +439,10 @@ export class BackgroundQueueCoordinator {
       sender.tab?.id === undefined ||
       sender.tab.id !== queue.targetTabId
     ) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "CONTENT_EVENT_STALE",
         category: "authorization",
-        userMessage: "AutoFlow rejected a stale page event.",
+        userMessage: "LuffyFlow rejected a stale page event.",
       })
     }
   }
@@ -463,8 +463,8 @@ export class BackgroundQueueCoordinator {
 }
 
 const ownershipError = () =>
-  new AutoflowError({
+  new LuffyflowError({
     code: "RECORD_OWNERSHIP_INVALID",
     category: "authorization",
-    userMessage: "This record does not belong to the authenticated AutoFlow account.",
+    userMessage: "This record does not belong to the authenticated LuffyFlow account.",
   })

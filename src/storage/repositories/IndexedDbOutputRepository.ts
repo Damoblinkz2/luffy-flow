@@ -5,7 +5,7 @@ import {
   type PageRequest,
   type PageResult,
 } from "~/schemas"
-import type { AutoflowDatabase } from "~/storage/indexed-db/database"
+import type { LuffyflowDatabase } from "~/storage/indexed-db/database"
 import type { OutputRecordPatch, OutputRepository } from "~/storage/repositories/contracts"
 
 import {
@@ -18,7 +18,7 @@ import { paginateRecords } from "./pagination"
 /** Output fingerprints are enforced by a unique IndexedDB index for restart-safe idempotency. */
 export class IndexedDbOutputRepository implements OutputRepository {
   constructor(
-    private readonly database: Promise<AutoflowDatabase>,
+    private readonly database: Promise<LuffyflowDatabase>,
     private readonly now: () => Date = () => new Date(),
   ) {}
 

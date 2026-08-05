@@ -1,6 +1,6 @@
 import type { AdapterResult, PlatformAdapter, SubmitPromptContext } from "~/adapters/contracts"
 import { type PlatformAdapterRegistry } from "~/adapters/registry"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type { MessageOf } from "~/schemas/messages"
 import type { DetectedOutput, ErrorCategory, PlatformStatusSnapshot } from "~/schemas"
 
@@ -25,10 +25,10 @@ export class ContentAutomationCoordinator {
     const payload = message.payload
     const commandKey = `${payload.queueId}:${payload.leaseGeneration}:${payload.promptId}`
     if (this.completedCommands.has(commandKey)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "CONTENT_COMMAND_DUPLICATE",
         category: "submission_failure",
-        userMessage: "AutoFlow rejected a duplicate prompt command.",
+        userMessage: "LuffyFlow rejected a duplicate prompt command.",
       })
     }
     const previousGeneration = this.latestGeneration.get(payload.queueId) ?? -1
@@ -40,10 +40,10 @@ export class ContentAutomationCoordinator {
       this.latestGeneration.set(payload.queueId, payload.leaseGeneration)
     }
     if (this.active !== null) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "CONTENT_COMMAND_ACTIVE",
         category: "submission_failure",
-        userMessage: "Another AutoFlow prompt command is still active on this page.",
+        userMessage: "Another LuffyFlow prompt command is still active on this page.",
         recoverable: true,
       })
     }
@@ -67,7 +67,7 @@ export class ContentAutomationCoordinator {
       }
       const pageState = unwrap(await adapter.detectPageState(controller.signal))
       if (pageState.readiness !== "ready") {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "PLATFORM_NOT_READY",
           category: "submission_failure",
           userMessage: readinessMessage(pageState.readiness),
@@ -124,7 +124,7 @@ export class ContentAutomationCoordinator {
     if (this.active === null || this.active.routeKey === contentRouteKey(url)) return
     this.active.controller.abort(
       new DOMException(
-        "The platform navigated while an AutoFlow command was active.",
+        "The platform navigated while an LuffyFlow command was active.",
         "AbortError",
       ),
     )
@@ -142,10 +142,10 @@ export class ContentAutomationCoordinator {
   ): PlatformAdapter {
     const adapter = this.registry.get(id)
     if (adapter === null || adapter.version !== version) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "ADAPTER_VERSION_MISMATCH",
         category: "platform_unsupported",
-        userMessage: "Reload this platform tab so AutoFlow can use the current adapter version.",
+        userMessage: "Reload this platform tab so LuffyFlow can use the current adapter version.",
         recoverable: true,
       })
     }
@@ -155,7 +155,7 @@ export class ContentAutomationCoordinator {
 
 const unwrap = <T>(result: AdapterResult<T>): T => {
   if (result.ok) return result.value
-  throw new AutoflowError({
+  throw new LuffyflowError({
     code: result.error.code.toUpperCase(),
     category: categoryForAdapterError(result.error.code),
     userMessage: result.error.message,
@@ -176,9 +176,9 @@ const categoryForAdapterError = (code: string): ErrorCategory => {
 
 const readinessMessage = (readiness: string): string => {
   if (readiness === "authentication_required")
-    return "Log in to the AI platform before starting AutoFlow."
+    return "Log in to the AI platform before starting LuffyFlow."
   if (readiness === "rate_limited")
-    return "The platform is rate limiting requests. AutoFlow paused safely."
+    return "The platform is rate limiting requests. LuffyFlow paused safely."
   if (readiness === "service_unavailable") return "The platform service is currently unavailable."
   if (readiness === "generation_in_progress")
     return "Wait for the current platform generation to finish."
@@ -186,10 +186,10 @@ const readinessMessage = (readiness: string): string => {
 }
 
 const staleCommandError = () =>
-  new AutoflowError({
+  new LuffyflowError({
     code: "CONTENT_COMMAND_STALE",
     category: "authorization",
-    userMessage: "AutoFlow rejected a stale content-script command.",
+    userMessage: "LuffyFlow rejected a stale content-script command.",
   })
 
 const trimSet = (values: Set<string>, maximumSize: number): void => {

@@ -1,6 +1,6 @@
 # Stage 7: User interfaces
 
-Stage 7 implements AutoFlow's popup, side panel, routed dashboard, options page, prompt history,
+Stage 7 implements LuffyFlow's popup, side panel, routed dashboard, options page, prompt history,
 output library, settings, account page, rename dialog, download actions, and reusable empty/error/
 loading states. Stage 8 tests have not started.
 
@@ -30,7 +30,7 @@ error boundary. Popup closure never owns or stops a queue.
 TXT upload is first-class:
 
 1. The user chooses or drops a `.txt` file.
-2. AutoFlow checks the 2 MiB limit and parses one prompt per non-empty line locally.
+2. LuffyFlow checks the 2 MiB limit and parses one prompt per non-empty line locally.
 3. Imported drafts are displayed with source row and filename.
 4. The user can edit, select, reorder, or remove each draft.
 5. Only an explicit **Add selected to queue** action sends validated text to the background.

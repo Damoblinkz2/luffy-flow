@@ -1,6 +1,6 @@
 import type { z } from "zod"
 
-import { AutoflowError, toAutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError, toLuffyflowError } from "~/errors/luffyflow-error"
 import { apiErrorBodySchema } from "~/schemas/errors"
 import { createCorrelationId } from "~/utils/ids"
 import { delay } from "~/utils/time"
@@ -71,10 +71,10 @@ export class ApiClient implements TypedApiClient {
         const decodedBody = this.decodeBody(response)
         const parsed = responseSchema.safeParse(decodedBody)
         if (!parsed.success) {
-          throw new AutoflowError({
+          throw new LuffyflowError({
             code: "API_RESPONSE_INVALID",
             category: "invalid_data",
-            userMessage: "AutoFlow received an invalid response from the service.",
+            userMessage: "Luffyflow received an invalid response from the service.",
             diagnosticMessage: parsed.error.message,
             correlationId,
             details: { status: response.status, path: request.path },
@@ -104,10 +104,10 @@ export class ApiClient implements TypedApiClient {
       }
     }
 
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "API_RETRY_EXHAUSTED",
       category: "network",
-      userMessage: "AutoFlow could not reach the service after several attempts.",
+      userMessage: "Luffyflow could not reach the service after several attempts.",
       correlationId,
       recoverable: true,
     })
@@ -157,7 +157,7 @@ export class ApiClient implements TypedApiClient {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`
     const url = new URL(normalizedPath, `${this.options.baseUrl.replace(/\/+$/, "")}/`)
     if (url.origin !== new URL(this.options.baseUrl).origin) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "API_PATH_INVALID",
         category: "invalid_data",
         userMessage: "The API request path is invalid.",
@@ -175,17 +175,17 @@ export class ApiClient implements TypedApiClient {
     try {
       return JSON.parse(response.bodyText) as unknown
     } catch (error) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "API_RESPONSE_NOT_JSON",
         category: "invalid_data",
-        userMessage: "AutoFlow received an unreadable response from the service.",
+        userMessage: "Luffyflow received an unreadable response from the service.",
         diagnosticMessage: "The response body was not valid JSON.",
         cause: error,
       })
     }
   }
 
-  private createResponseError(response: TransportResponse, correlationId: string): AutoflowError {
+  private createResponseError(response: TransportResponse, correlationId: string): LuffyflowError {
     const parsedBody = (() => {
       try {
         return apiErrorBodySchema.safeParse(JSON.parse(response.bodyText) as unknown)
@@ -195,7 +195,7 @@ export class ApiClient implements TypedApiClient {
     })()
     const retryAfterMs = this.readRetryAfterMs(response.headers)
 
-    return new AutoflowError({
+    return new LuffyflowError({
       code: parsedBody.success ? parsedBody.data.code : `HTTP_${response.status}`,
       category:
         parsedBody.success && parsedBody.data.category !== undefined
@@ -203,7 +203,7 @@ export class ApiClient implements TypedApiClient {
           : this.categoryForStatus(response.status),
       userMessage: parsedBody.success
         ? parsedBody.data.message
-        : "AutoFlow could not complete the service request.",
+        : "LuffyFlow could not complete the service request.",
       diagnosticMessage: `The API returned HTTP ${response.status}.`,
       correlationId,
       recoverable: RETRYABLE_STATUS_CODES.has(response.status),
@@ -237,16 +237,16 @@ export class ApiClient implements TypedApiClient {
     request: ApiRequest<TBody>,
     correlationId: string,
     attemptSignal: AbortSignal,
-  ): AutoflowError {
-    if (error instanceof AutoflowError) return error
+  ): LuffyflowError {
+    if (error instanceof LuffyflowError) return error
     const timedOut = attemptSignal.aborted && request.signal?.aborted !== true
 
-    return toAutoflowError(error, {
+    return toLuffyflowError(error, {
       code: timedOut ? "API_TIMEOUT" : "API_NETWORK_ERROR",
       category: timedOut ? "timeout" : "network",
       userMessage: timedOut
         ? "The service request timed out."
-        : "AutoFlow could not connect to the service.",
+        : "LuffyFlow could not connect to the service.",
       correlationId,
       recoverable: true,
       details: { method: request.method, path: request.path },

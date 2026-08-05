@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 
 /** Native setters and bubbling events match controlled React inputs without framework internals. */
 export const setVisiblePromptValue = (element: HTMLElement, value: string): void => {
@@ -38,7 +38,7 @@ export const clickVisibleControl = (element: HTMLElement): void => {
 }
 
 const inputUnavailableError = () =>
-  new AutoflowError({
+  new LuffyflowError({
     code: "PROMPT_INPUT_UNAVAILABLE",
     category: "prompt_input_unavailable",
     userMessage: "The platform prompt control is not currently available.",

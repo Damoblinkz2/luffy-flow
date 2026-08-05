@@ -2,11 +2,11 @@ import { GeminiAdapter } from "~/adapters/gemini"
 import { GoogleFlowAdapter } from "~/adapters/google-flow"
 import { GrokAdapter } from "~/adapters/grok"
 import { PlatformAdapterRegistry } from "~/adapters/registry"
-import type { AutoflowSettings } from "~/schemas"
+import type { LuffyflowSettings } from "~/schemas"
 
 /** The content composition root registers exactly one instance of every supported adapter. */
 export const createDefaultAdapterRegistry = (
-  settings?: AutoflowSettings["platformAdapters"],
+  settings?: LuffyflowSettings["platformAdapters"],
 ): PlatformAdapterRegistry => {
   const registry = new PlatformAdapterRegistry()
   registry.register(new GoogleFlowAdapter(settings?.["google-flow"].selectorOverrides))

@@ -1,6 +1,6 @@
 # Stage 8: Testing
 
-Stage 8 adds a deterministic Vitest/JSDOM test harness for AutoFlow. The suite does not connect to or automate live Google Flow, Gemini, or Grok pages. Platform selectors remain provisional until they are verified manually against the live, permitted user interface.
+Stage 8 adds a deterministic Vitest/JSDOM test harness for LuffyFlow. The suite does not connect to or automate live Google Flow, Gemini, or Grok pages. Platform selectors remain provisional until they are verified manually against the live, permitted user interface.
 
 ## Commands
 

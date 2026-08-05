@@ -1,4 +1,4 @@
-# AutoFlow — Stage 3 Shared Foundations
+# LuffyFlow — Stage 3 Shared Foundations
 
 **Status:** Implemented and structurally validated  
 **Scope:** Domain validation, errors/logging, API transports, storage abstractions, and typed messaging
@@ -13,7 +13,7 @@ Prompt imports model `.txt` as a first-class source alongside typed text, CSV, a
 
 ### Error and logging boundary
 
-`AutoflowError` provides stable codes, categories, recovery hints, correlation IDs, user-facing text, and optional diagnostics. Native causes and stack traces never cross storage or message boundaries.
+`LuffyflowError` provides stable codes, categories, recovery hints, correlation IDs, user-facing text, and optional diagnostics. Native causes and stack traces never cross storage or message boundaries.
 
 The structured logger has injectable clocks and sinks. Redaction happens before a sink receives metadata. Tokens, passwords, authorization headers, cookies, API keys, and secrets are always redacted; prompt and output content are additionally redacted when privacy mode is enabled.
 
@@ -36,7 +36,7 @@ The API client receives its transport, logger, token provider, and random source
 
 The generic key-value port separates application services from Plasmo Storage and future IndexedDB repositories. Every versioned namespace stores an envelope with schema version and update timestamp, validates reads and writes, rejects data written by a newer extension, and permits only contiguous forward migrations.
 
-AutoFlow storage keys are centrally allowlisted. Clear-data features can remove those keys individually without calling a broad extension-storage clear operation. Repository ports define optimistic prompt/output updates, idempotent output creation, durable queue leases, sequence allocation, and settings persistence; concrete repositories arrive in Stage 5.
+LuffyFlow storage keys are centrally allowlisted. Clear-data features can remove those keys individually without calling a broad extension-storage clear operation. Repository ports define optimistic prompt/output updates, idempotent output creation, durable queue leases, sequence allocation, and settings persistence; concrete repositories arrive in Stage 5.
 
 ### Typed messaging
 
@@ -70,7 +70,7 @@ Outbound messages and inbound responses are validated. The router validates unkn
 
 - `src/config/env.ts`
 - `src/constants/index.ts`
-- `src/errors/autoflow-error.ts`
+- `src/errors/luffyflow-error.ts`
 - `src/logging/logger.ts`
 - `src/utils/ids.ts`
 - `src/utils/redaction.ts`

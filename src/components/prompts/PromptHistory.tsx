@@ -11,7 +11,7 @@ import {
   Badge,
 } from "~/components/common"
 import { useApplicationServices } from "~/components/common/ApplicationProviders"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { TypedMessageClient } from "~/messaging/client"
 import { RuntimeMessageTransport } from "~/messaging/runtime-transport"
 import {
@@ -154,7 +154,7 @@ export const PromptHistory = () => {
             )
             .join("\r\n")}\r\n`
     try {
-      await downloadHistoryFile(`autoflow-prompt-history.${format}`, content, format)
+      await downloadHistoryFile(`luffyflow-prompt-history.${format}`, content, format)
     } catch {
       setError("The browser could not export the selected prompt history.")
     }
@@ -410,7 +410,7 @@ export const PromptHistory = () => {
 }
 
 const messageFromError = (error: unknown): string =>
-  error instanceof AutoflowError
+  error instanceof LuffyflowError
     ? error.userMessage
     : error instanceof Error
       ? error.message

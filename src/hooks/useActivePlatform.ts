@@ -56,7 +56,7 @@ export const useActivePlatform = (): ActivePlatformSnapshot & { refresh(): void 
           setSnapshot({
             loading: false,
             supported: false,
-            error: "AutoFlow could not inspect the active tab.",
+            error: "LuffyFlow could not inspect the active tab.",
           })
         }
       }

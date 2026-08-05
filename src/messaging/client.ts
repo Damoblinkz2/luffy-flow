@@ -1,6 +1,6 @@
 import type { z } from "zod"
 
-import { AutoflowError, toAutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError, toLuffyflowError } from "~/errors/luffyflow-error"
 import {
   createMessageResponseSchema,
   type MessageKind,
@@ -36,7 +36,7 @@ export class TypedMessageClient {
       const rawResponse = await this.transport.send(message)
       const response = createMessageResponseSchema(options.responseSchema).parse(rawResponse)
       if (!response.ok) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: response.error.code,
           category: response.error.category,
           userMessage: response.error.userMessage,
@@ -49,10 +49,10 @@ export class TypedMessageClient {
       }
       return response.data
     } catch (error) {
-      throw toAutoflowError(error, {
+      throw toLuffyflowError(error, {
         code: "MESSAGE_SEND_FAILED",
         category: "network",
-        userMessage: "AutoFlow could not communicate with another extension component.",
+        userMessage: "LuffyFlow could not communicate with another extension component.",
         correlationId: message.correlationId,
         recoverable: true,
         details: { kind: options.kind, target: options.target },

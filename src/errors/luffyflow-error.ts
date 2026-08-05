@@ -1,7 +1,7 @@
-import type { ErrorCategory, SerializedAutoflowError } from "~/schemas/errors"
+import type { ErrorCategory, SerializedLuffyflowError } from "~/schemas/errors"
 import { createCorrelationId } from "~/utils/ids"
 
-export interface AutoflowErrorOptions {
+export interface LuffyflowErrorOptions {
   code: string
   category: ErrorCategory
   userMessage: string
@@ -14,7 +14,7 @@ export interface AutoflowErrorOptions {
 }
 
 /** One error class normalizes failures across storage, APIs, messaging, and adapters. */
-export class AutoflowError extends Error {
+export class LuffyflowError extends Error {
   readonly code: string
   readonly category: ErrorCategory
   readonly userMessage: string
@@ -24,9 +24,9 @@ export class AutoflowError extends Error {
   readonly correlationId: string
   readonly details?: Record<string, unknown>
 
-  constructor(options: AutoflowErrorOptions) {
+  constructor(options: LuffyflowErrorOptions) {
     super(options.diagnosticMessage ?? options.userMessage, { cause: options.cause })
-    this.name = "AutoflowError"
+    this.name = "LuffyflowError"
     this.code = options.code
     this.category = options.category
     this.userMessage = options.userMessage
@@ -39,7 +39,7 @@ export class AutoflowError extends Error {
   }
 
   /** Serialization deliberately omits the native cause and stack trace. */
-  toJSON(): SerializedAutoflowError {
+  toJSON(): SerializedLuffyflowError {
     return {
       code: this.code,
       category: this.category,
@@ -56,13 +56,13 @@ export class AutoflowError extends Error {
 }
 
 /** Unknown thrown values become safe, user-facing errors at module boundaries. */
-export const toAutoflowError = (
+export const toLuffyflowError = (
   error: unknown,
-  fallback: Omit<AutoflowErrorOptions, "cause">,
-): AutoflowError => {
-  if (error instanceof AutoflowError) return error
+  fallback: Omit<LuffyflowErrorOptions, "cause">,
+): LuffyflowError => {
+  if (error instanceof LuffyflowError) return error
 
-  return new AutoflowError({
+  return new LuffyflowError({
     ...fallback,
     diagnosticMessage:
       fallback.diagnosticMessage ??

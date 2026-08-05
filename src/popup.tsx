@@ -69,7 +69,7 @@ const PopupBody = () => {
   if (status !== "authenticated" || session === null) {
     return (
       <EmptyState
-        title="Welcome to AutoFlow"
+        title="Welcome to LuffyFlow"
         description="Log in to queue prompts and organize generated outputs."
         action={<Button onClick={() => void openDashboard("/login")}>Log in</Button>}
       />
@@ -159,7 +159,7 @@ const Popup = () => (
     <ApplicationProviders>
       <main className="w-[380px] p-4">
         <header className="mb-4">
-          <h1 className="text-xl font-bold text-primary">AutoFlow</h1>
+          <h1 className="text-xl font-bold text-primary">LuffyFlow</h1>
           <p className="text-xs text-foreground/60">Queue prompts. Track outputs.</p>
         </header>
         <PopupBody />

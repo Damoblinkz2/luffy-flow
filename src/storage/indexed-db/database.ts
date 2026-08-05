@@ -2,11 +2,11 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb"
 
 import type { OutputRecord, PromptRecord } from "~/schemas"
 
-const DATABASE_NAME = "autoflow-records"
+const DATABASE_NAME = "luffyflow-records"
 const DATABASE_VERSION = 1
 
 /** IndexedDB holds potentially large prompt/output text outside extension sync storage. */
-export interface AutoflowDatabaseSchema extends DBSchema {
+export interface LuffyflowDatabaseSchema extends DBSchema {
   prompts: {
     key: string
     value: PromptRecord
@@ -27,11 +27,11 @@ export interface AutoflowDatabaseSchema extends DBSchema {
   }
 }
 
-export type AutoflowDatabase = IDBPDatabase<AutoflowDatabaseSchema>
+export type LuffyflowDatabase = IDBPDatabase<LuffyflowDatabaseSchema>
 
 /** Database creation is versioned and closes stale connections before a future migration. */
-export const openAutoflowDatabase = (name = DATABASE_NAME): Promise<AutoflowDatabase> =>
-  openDB<AutoflowDatabaseSchema>(name, DATABASE_VERSION, {
+export const openLuffyflowDatabase = (name = DATABASE_NAME): Promise<LuffyflowDatabase> =>
+  openDB<LuffyflowDatabaseSchema>(name, DATABASE_VERSION, {
     upgrade(database, oldVersion) {
       if (oldVersion < 1) {
         const prompts = database.createObjectStore("prompts", { keyPath: "id" })

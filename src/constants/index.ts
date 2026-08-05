@@ -34,6 +34,6 @@ export const MOCK_PLAN_LIMITS = {
 } as const
 
 export const DEMO_ACCOUNT = {
-  email: "demo@autoflow.local",
+  email: "demo@luffyflow.local",
   password: "Demo123!",
 } as const

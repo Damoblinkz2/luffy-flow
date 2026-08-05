@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type { SupportedPlatform } from "~/schemas"
 
 import type { PlatformAdapter } from "./contracts"
@@ -9,7 +9,7 @@ export class PlatformAdapterRegistry {
 
   register(adapter: PlatformAdapter): () => void {
     if (this.adapters.has(adapter.id)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "ADAPTER_DUPLICATE",
         category: "invalid_data",
         userMessage: `The ${adapter.displayName} adapter was registered more than once.`,

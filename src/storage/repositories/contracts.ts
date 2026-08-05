@@ -1,5 +1,5 @@
 import type {
-  AutoflowSettings,
+  LuffyflowSettings,
   EntityId,
   OutputFilters,
   OutputRecord,
@@ -85,6 +85,6 @@ export interface SequenceRepository {
 }
 
 export interface SettingsRepository {
-  get(): Promise<AutoflowSettings>
-  save(settings: AutoflowSettings): Promise<AutoflowSettings>
+  get(): Promise<LuffyflowSettings>
+  save(settings: LuffyflowSettings): Promise<LuffyflowSettings>
 }

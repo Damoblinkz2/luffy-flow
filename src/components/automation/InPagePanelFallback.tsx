@@ -26,17 +26,17 @@ const InPagePanelBody = ({ onClose }: InPagePanelFallbackProps) => {
         className="fixed bottom-4 right-4 z-[2147483647] shadow-panel"
         onClick={() => setCollapsed(false)}
       >
-        Open AutoFlow
+        Open LuffyFlow
       </Button>
     )
   }
   return (
     <aside
       className="fixed bottom-4 right-4 top-4 z-[2147483647] w-[min(420px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border bg-background p-3 text-foreground shadow-panel"
-      aria-label="AutoFlow in-page panel"
+      aria-label="LuffyFlow in-page panel"
     >
       <header className="mb-3 flex items-center justify-between gap-2">
-        <strong className="text-primary">AutoFlow</strong>
+        <strong className="text-primary">LuffyFlow</strong>
         <div className="flex gap-1">
           <Button variant="ghost" onClick={() => setCollapsed(true)}>
             Collapse

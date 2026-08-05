@@ -21,7 +21,7 @@ export const errorCategorySchema = z.enum([
 ])
 
 /** Serializable errors exclude native causes and sensitive request details. */
-export const serializedAutoflowErrorSchema = z.object({
+export const serializedLuffyflowErrorSchema = z.object({
   code: z.string().min(1).max(128),
   category: errorCategorySchema,
   userMessage: z.string().min(1).max(2_000),
@@ -42,5 +42,5 @@ export const apiErrorBodySchema = z.object({
 })
 
 export type ErrorCategory = z.infer<typeof errorCategorySchema>
-export type SerializedAutoflowError = z.infer<typeof serializedAutoflowErrorSchema>
+export type SerializedLuffyflowError = z.infer<typeof serializedLuffyflowErrorSchema>
 export type ApiErrorBody = z.infer<typeof apiErrorBodySchema>

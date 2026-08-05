@@ -6,7 +6,7 @@ import { OutputLibrary } from "~/components/outputs"
 import { PromptComposer, PromptQueue } from "~/components/prompts"
 import { useActivePlatform } from "~/hooks/useActivePlatform"
 import { useQueueWorkspace } from "~/hooks/useQueueWorkspace"
-import type { AutoflowSettings } from "~/schemas"
+import type { LuffyflowSettings } from "~/schemas"
 
 type WorkspaceSource = "dashboard" | "sidepanel" | "in_page_panel"
 
@@ -20,7 +20,7 @@ export const AutomationWorkspace = ({ source, compact = false }: AutomationWorks
   const services = useApplicationServices()
   const activePlatform = useActivePlatform()
   const queue = useQueueWorkspace(source)
-  const [settings, setSettings] = useState<AutoflowSettings | null>(null)
+  const [settings, setSettings] = useState<LuffyflowSettings | null>(null)
   const [delayMs, setDelayMs] = useState(8_000)
   const [namingPattern, setNamingPattern] = useState("")
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null)
@@ -111,7 +111,7 @@ export const AutomationWorkspace = ({ source, compact = false }: AutomationWorks
         )}
         {!activePlatform.loading && !activePlatform.supported ? (
           <p className="mt-3 text-sm">
-            Open an official Google Flow, Gemini, or Grok page. AutoFlow does not request access to
+            Open an official Google Flow, Gemini, or Grok page. LuffyFlow does not request access to
             unrelated sites.
           </p>
         ) : null}

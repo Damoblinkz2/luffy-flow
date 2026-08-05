@@ -1,4 +1,4 @@
-# AutoFlow — Stage 1 Architecture
+# LuffyFlow — Stage 1 Architecture
 
 **Status:** Architecture approved for implementation  
 **Primary target:** Chromium browsers (Chrome, Edge, and Brave), Manifest V3  
@@ -7,7 +7,7 @@
 
 ## 1. Scope and product boundaries
 
-AutoFlow is a browser extension that helps an authenticated user prepare a queue of prompts, submit those prompts through the visible interfaces of Google Flow, Google Gemini, and Grok, detect the resulting outputs, and organize or download the output records.
+LuffyFlow is a browser extension that helps an authenticated user prepare a queue of prompts, submit those prompts through the visible interfaces of Google Flow, Google Gemini, and Grok, detect the resulting outputs, and organize or download the output records.
 
 The extension automates only actions that an authenticated user can perform in the visible website UI. It will not bypass authentication, CAPTCHAs, rate limits, signed-URL restrictions, cross-origin protections, platform permissions, or anti-bot systems. Rate-limit or service-unavailable signals pause the queue and require the user to decide when it is safe to resume.
 
@@ -35,7 +35,7 @@ Files are parsed locally and are not uploaded to the mock or real backend merely
 
 ### 2.1 Runtime separation
 
-AutoFlow has five runtime surfaces with deliberately narrow responsibilities:
+LuffyFlow has five runtime surfaces with deliberately narrow responsibilities:
 
 | Runtime                        | Responsibilities                                                                                                                                                    | Durable authority                             |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
@@ -202,7 +202,7 @@ flowchart LR
 The tree follows Plasmo entry-point conventions while keeping application code under `src`.
 
 ```text
-autoflow/
+luffyflow/
 ├─ .env.example
 ├─ .gitignore
 ├─ .prettierignore
@@ -231,7 +231,7 @@ autoflow/
 │  │  ├─ message-router.ts
 │  │  └─ queue-coordinator.ts
 │  ├─ contents/
-│  │  ├─ autoflow.tsx
+│  │  ├─ luffyflow.tsx
 │  │  ├─ content-coordinator.ts
 │  │  ├─ injected-panel-host.tsx
 │  │  └─ spa-navigation-observer.ts
@@ -405,7 +405,7 @@ type ErrorCategory =
   | "invalid_data"
   | "unknown"
 
-interface AutoflowError {
+interface LuffyFlowError {
   code: string
   category: ErrorCategory
   userMessage: string
@@ -567,7 +567,7 @@ interface OutputRecord {
   updatedAt: IsoDateTime
   downloadStatus: DownloadStatus
   downloadedAt?: IsoDateTime
-  error?: Pick<AutoflowError, "code" | "category" | "userMessage">
+  error?: Pick<LuffyFlowError, "code" | "category" | "userMessage">
   sessionId: EntityId
   revision: number
   syncStatus: SyncStatus
@@ -632,7 +632,7 @@ interface PlatformAdapterSettings {
   selectorOverrides: Record<string, string[]>
 }
 
-interface AutoflowSettings {
+interface LuffyFlowSettings {
   schemaVersion: number
   defaultPromptDelayMs: number
   maximumRetryCount: number
@@ -774,8 +774,8 @@ interface SequenceRepository {
 }
 
 interface SettingsRepository {
-  get(): Promise<AutoflowSettings>
-  save(settings: AutoflowSettings): Promise<AutoflowSettings>
+  get(): Promise<LuffyFlowSettings>
+  save(settings: LuffyFlowSettings): Promise<LuffyFlowSettings>
 }
 ```
 
@@ -857,7 +857,7 @@ interface MessagePayloadMap {
   "prompt/status/changed": {
     promptId: EntityId
     status: PromptStatus
-    error?: Pick<AutoflowError, "code" | "category" | "userMessage" | "recoverable">
+    error?: Pick<LuffyFlowError, "code" | "category" | "userMessage" | "recoverable">
   }
   "output/detected": {
     eventId: string
@@ -878,14 +878,14 @@ interface MessagePayloadMap {
   "download/completed": { outputId: EntityId; browserDownloadId: number }
   "download/failed": {
     outputId: EntityId
-    error: Pick<AutoflowError, "code" | "category" | "userMessage" | "recoverable">
+    error: Pick<LuffyFlowError, "code" | "category" | "userMessage" | "recoverable">
   }
-  "settings/updated": { settings: AutoflowSettings }
+  "settings/updated": { settings: LuffyFlowSettings }
   "usage/updated": { usage: Usage }
   "adapter/error": {
     tabId: number
     promptId?: EntityId
-    error: Pick<AutoflowError, "code" | "category" | "userMessage" | "recoverable">
+    error: Pick<LuffyFlowError, "code" | "category" | "userMessage" | "recoverable">
   }
   "command/cancel": { commandId: string; reason: string }
 }
@@ -900,7 +900,7 @@ type MessageResponse<T> =
       ok: false
       correlationId: string
       error: Pick<
-        AutoflowError,
+        LuffyFlowError,
         "code" | "category" | "userMessage" | "diagnosticMessage" | "recoverable"
       >
     }
@@ -1130,7 +1130,7 @@ interface AuthApi {
 }
 ```
 
-The mock service accepts the development account `demo@autoflow.local` / `Demo123!`, simulates latency and errors, and never persists the submitted password. Stage 9 will clearly label this account as development-only.
+The mock service accepts the development account `demo@luffyflow.local` / `Demo123!`, simulates latency and errors, and never persists the submitted password. Stage 9 will clearly label this account as development-only.
 
 ### 11.3 Billing and usage APIs
 
@@ -1169,7 +1169,7 @@ interface UsageApi {
 }
 ```
 
-No card forms or card data exist in AutoFlow. A future payment provider adapter will redirect to a hosted checkout.
+No card forms or card data exist in LuffyFlow. A future payment provider adapter will redirect to a hosted checkout.
 
 ### 11.4 Record, settings, and sync APIs
 
@@ -1193,8 +1193,8 @@ interface OutputsApi {
 }
 
 interface SettingsApi {
-  get(): Promise<AutoflowSettings>
-  update(settings: AutoflowSettings): Promise<AutoflowSettings>
+  get(): Promise<LuffyFlowSettings>
+  update(settings: LuffyFlowSettings): Promise<LuffyFlowSettings>
 }
 
 interface SyncBatch {
@@ -1202,7 +1202,7 @@ interface SyncBatch {
   requestedAt: IsoDateTime
   prompts: PromptRecord[]
   outputs: OutputRecord[]
-  settings?: AutoflowSettings
+  settings?: LuffyflowSettings
 }
 
 interface SyncBatchResult {
@@ -1331,7 +1331,7 @@ Backend host permission strategy:
 - Mock mode requires no network host permission.
 - A production build declares its fixed API origin from the build environment.
 - A user-entered non-default backend URL requires a user-initiated optional host-permission request, if supported by the selected Plasmo/Chromium configuration.
-- AutoFlow never requests `<all_urls>`.
+- LuffyFloww never requests `<all_urls>`.
 
 Content scripts run only on declared supported origins. The extension CSP uses packaged scripts only and forbids `eval` and remote executable code.
 
@@ -1346,7 +1346,7 @@ Content scripts run only on declared supported origins. The extension CSP uses p
 - Clear-data and record deletion actions require confirmation and are scoped to explicit namespaces/IDs.
 - Storage keys are versioned. Sensitive local tokens are treated as bearer credentials and never described as equivalent to secure HTTP-only cookies.
 - The production backend should use short-lived access tokens, refresh-token rotation, token revocation, audience/issuer validation, and the narrowest practical extension token strategy. If architecture permits, a backend-mediated browser flow is preferable to exposing long-lived tokens.
-- AutoFlow does not store large fetched media blobs. URLs may be ephemeral and inaccessible after the platform session changes.
+- LuffyFlow does not store large fetched media blobs. URLs may be ephemeral and inaccessible after the platform session changes.
 
 ## 17. Logging and observability
 

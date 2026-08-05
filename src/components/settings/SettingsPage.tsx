@@ -6,9 +6,9 @@ import { useAuthStore } from "~/components/auth/AuthProvider"
 import { Button, ConfirmDialog, ErrorState, LoadingState, SelectField } from "~/components/common"
 import { applyTheme, useApplicationServices } from "~/components/common/ApplicationProviders"
 import {
-  autoflowSettingsSchema,
+  luffyflowSettingsSchema,
   selectorOverridesSchema,
-  type AutoflowSettings,
+  type LuffyflowSettings,
   type SupportedPlatform,
 } from "~/schemas"
 
@@ -38,7 +38,7 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<AutoflowSettings>({ resolver: zodResolver(autoflowSettingsSchema) })
+  } = useForm<LuffyflowSettings>({ resolver: zodResolver(luffyflowSettingsSchema) })
 
   useEffect(() => {
     let active = true
@@ -59,7 +59,7 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
       },
       () => {
         if (active) {
-          setLoadError("AutoFlow settings could not be loaded.")
+          setLoadError("LuffyFlow settings could not be loaded.")
           setLoading(false)
         }
       },
@@ -69,7 +69,7 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
     }
   }, [reset, services])
 
-  const save = async (values: AutoflowSettings): Promise<void> => {
+  const save = async (values: LuffyflowSettings): Promise<void> => {
     setMessage(null)
     try {
       const overrides = {
@@ -79,7 +79,7 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
         gemini: selectorOverridesSchema.parse(JSON.parse(selectorJson.gemini) as unknown),
         grok: selectorOverridesSchema.parse(JSON.parse(selectorJson.grok) as unknown),
       }
-      const parsed = autoflowSettingsSchema.parse({
+      const parsed = luffyflowSettingsSchema.parse({
         ...values,
         platformAdapters: {
           "google-flow": {
@@ -113,11 +113,11 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
       const database = await services.repositories.database
       database.close()
       await clearChromeLocalStorage()
-      await deleteIndexedDatabase("autoflow-records")
+      await deleteIndexedDatabase("luffyflow-records")
       globalThis.location.reload()
     } catch {
       setMessage(
-        "Local data could not be fully cleared. Close other AutoFlow pages and reload before retrying.",
+        "Local data could not be fully cleared. Close other LuffyFlow pages and reload before retrying.",
       )
     }
   }
@@ -141,7 +141,7 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
         ),
         services.settingsRepository.get(),
       ])
-      await downloadJsonFile(`autoflow-data-${new Date().toISOString().slice(0, 10)}.json`, {
+      await downloadJsonFile(`luffyflow-data-${new Date().toISOString().slice(0, 10)}.json`, {
         exportedAt: new Date().toISOString(),
         account: session.user,
         settings,
@@ -372,7 +372,7 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
       <AdapterDiagnosticsCard source={source} />
       <ConfirmDialog
         open={confirmClear}
-        title="Clear all AutoFlow data?"
+        title="Clear all LuffyFlow data?"
         description="This cannot be undone. Download or export anything you need first."
         confirmLabel="Clear all data"
         destructive
@@ -416,7 +416,7 @@ const deleteIndexedDatabase = (name: string): Promise<void> =>
     const request = indexedDB.deleteDatabase(name)
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error ?? new Error("IndexedDB deletion failed."))
-    request.onblocked = () => reject(new Error("Close other AutoFlow pages before clearing data."))
+    request.onblocked = () => reject(new Error("Close other LuffyFlow pages before clearing data."))
   })
 
 const readAllRecords = async <T,>(

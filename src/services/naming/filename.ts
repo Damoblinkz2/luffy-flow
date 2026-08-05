@@ -1,5 +1,5 @@
 import { MAX_FILENAME_LENGTH } from "~/constants"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 
 const ILLEGAL_FILENAME_CHARACTERS = /[<>:"/\\|?*\u0000-\u001f\u007f]/g
 const RESERVED_DEVICE_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i
@@ -31,7 +31,7 @@ export const normalizeExtension = (extension: string): string => {
     ? extension.toLowerCase()
     : `.${extension.toLowerCase()}`
   if (!/^\.[a-z0-9]{1,16}$/.test(candidate)) {
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "FILENAME_EXTENSION_INVALID",
       category: "invalid_data",
       userMessage: "The output file extension is invalid.",

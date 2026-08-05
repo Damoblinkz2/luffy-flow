@@ -1,4 +1,4 @@
-# AutoFlow — Stage 2 Project Configuration
+# LuffyFlow — Stage 2 Project Configuration
 
 **Status:** Complete  
 **Target:** Chromium Manifest V3  
@@ -8,7 +8,7 @@
 
 ### Plasmo configuration
 
-Plasmo 0.90.5 does not support a separate `plasmo.config.ts`. AutoFlow therefore uses Plasmo's supported conventions:
+Plasmo 0.90.5 does not support a separate `plasmo.config.ts`. LuffyFlow therefore uses Plasmo's supported conventions:
 
 - Extension metadata, permissions, host permissions, CSP, and other manifest overrides live in `package.json`.
 - All extension source entry points will live under Plasmo's default `src` source root.
@@ -34,7 +34,7 @@ Plasmo 0.90.5 does not support a separate `plasmo.config.ts`. AutoFlow therefore
 
 Host access is limited to the documented AI platform hosts. `x.com` host access is required only for the Grok route and does not authorize content scripts on unrelated routes. Content-script match patterns in Stage 6 will narrow execution further.
 
-`https://api.example.com/*` is an optional placeholder origin. A real deployment must replace it with the actual fixed backend origin or implement an explicit optional-origin permission flow. AutoFlow does not request `<all_urls>`.
+`https://api.example.com/*` is an optional placeholder origin. A real deployment must replace it with the actual fixed backend origin or implement an explicit optional-origin permission flow. LuffyFlow does not request `<all_urls>`.
 
 ### Strictness and quality gates
 

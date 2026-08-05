@@ -14,7 +14,7 @@ export const LoginPage = () => {
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center p-6">
       <section className="w-full rounded-2xl border border-border bg-surface p-6 shadow-panel">
-        <h1 className="text-2xl font-semibold">Welcome to AutoFlow</h1>
+        <h1 className="text-2xl font-semibold">Welcome to LuffyFlow</h1>
         <p className="mb-6 mt-2 text-sm text-foreground/70">
           Log in to manage prompt automation and saved outputs.
         </p>

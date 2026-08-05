@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla"
 
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type {
   CheckoutResult,
   InvoicePlaceholder,
@@ -102,7 +102,7 @@ export const createBillingStore = (service: SubscriptionService): StoreApi<Billi
   }))
 
 const messageFromError = (error: unknown): string =>
-  error instanceof AutoflowError
+  error instanceof LuffyflowError
     ? error.userMessage
     : error instanceof Error
       ? error.message

@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type {
   OutputFilters,
   OutputRecord,
@@ -33,7 +33,7 @@ class MockRemoteBoundary {
   async cross(): Promise<void> {
     await delay(this.options.latencyMs)
     if (this.random() < this.options.failureRate) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "MOCK_REMOTE_RECORD_FAILURE",
         category: "network",
         userMessage: "The mock record service simulated a temporary failure.",

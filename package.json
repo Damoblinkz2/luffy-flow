@@ -1,6 +1,6 @@
 {
-  "name": "autoflow",
-  "displayName": "AutoFlow",
+  "name": "luffyflow",
+  "displayName": "LuffyFlow",
   "version": "0.1.0",
   "private": true,
   "description": "A Chromium extension for safely queueing prompts and organizing outputs on supported AI platforms.",

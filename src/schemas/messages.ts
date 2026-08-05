@@ -3,10 +3,10 @@ import { z } from "zod"
 import { adapterHealthSchema, detectedOutputSchema } from "./adapter"
 import { userSchema } from "./auth"
 import { entityIdSchema, isoDateTimeSchema, supportedPlatformSchema } from "./common"
-import { serializedAutoflowErrorSchema } from "./errors"
+import { serializedLuffyflowErrorSchema } from "./errors"
 import { promptStatusSchema } from "./prompt"
 import { queueStateSchema } from "./queue"
-import { autoflowSettingsSchema, textExportFormatSchema } from "./settings"
+import { luffyflowSettingsSchema, textExportFormatSchema } from "./settings"
 import { usageSchema } from "./billing"
 
 /** Every message includes version, routing, and correlation metadata before its payload. */
@@ -33,7 +33,7 @@ const createMessageSchema = <TKind extends string, TPayload extends z.ZodType>(
   payload: TPayload,
 ) => z.object({ ...messageMetadataShape, kind: z.literal(kind), payload })
 
-const messageErrorSchema = serializedAutoflowErrorSchema.pick({
+const messageErrorSchema = serializedLuffyflowErrorSchema.pick({
   code: true,
   category: true,
   userMessage: true,
@@ -191,7 +191,7 @@ export const extensionMessageSchema = z.discriminatedUnion("kind", [
     "download/failed",
     z.object({ outputId: entityIdSchema, error: messageErrorSchema }),
   ),
-  createMessageSchema("settings/updated", z.object({ settings: autoflowSettingsSchema })),
+  createMessageSchema("settings/updated", z.object({ settings: luffyflowSettingsSchema })),
   createMessageSchema("usage/updated", z.object({ usage: usageSchema })),
   createMessageSchema(
     "adapter/error",

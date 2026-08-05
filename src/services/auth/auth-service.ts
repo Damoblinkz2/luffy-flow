@@ -1,6 +1,6 @@
 import type { AuthTokenProvider } from "~/api/client/contracts"
 import type { AuthApi } from "~/api/modules/auth-api"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type { Logger } from "~/logging/logger"
 import {
   authSessionSchema,
@@ -74,7 +74,7 @@ export class AuthService implements AuthTokenProvider {
       this.session = persistedSession
       return persistedSession
     } catch (error) {
-      if (error instanceof AutoflowError && error.category === "authentication") {
+      if (error instanceof LuffyflowError && error.category === "authentication") {
         return this.refreshSession()
       }
       this.logger.warn(
@@ -115,7 +115,7 @@ export class AuthService implements AuthTokenProvider {
     this.refreshOperation = (async () => {
       const session = await this.ensureHydrated()
       if (session === null) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "AUTH_SESSION_MISSING",
           category: "authentication",
           userMessage: "Please log in to continue.",

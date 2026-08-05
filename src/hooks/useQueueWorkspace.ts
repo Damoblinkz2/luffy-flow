@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { TypedMessageClient } from "~/messaging/client"
 import { TypedMessageRouter } from "~/messaging/router"
 import { listenForRuntimeMessages, RuntimeMessageTransport } from "~/messaging/runtime-transport"
@@ -120,7 +120,7 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
 
   const requireQueue = useCallback((): QueueState => {
     if (queue === null) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_MISSING",
         category: "invalid_data",
         userMessage: "Create a prompt queue first.",
@@ -153,7 +153,7 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
             })
           : active.platform !== input.platform
             ? Promise.reject(
-                new AutoflowError({
+                new LuffyflowError({
                   code: "QUEUE_PLATFORM_MISMATCH",
                   category: "invalid_data",
                   userMessage:
@@ -200,7 +200,7 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
         payload: {
           queueId: active.id,
           expectedRevision: active.revision,
-          reason: "Paused from the AutoFlow UI.",
+          reason: "Paused from the LuffyFlow UI.",
         },
         responseSchema: queueStateSchema,
       }),
@@ -332,8 +332,8 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
 }
 
 const messageFromError = (error: unknown): string =>
-  error instanceof AutoflowError
+  error instanceof LuffyflowError
     ? error.userMessage
     : error instanceof Error
       ? error.message
-      : "AutoFlow could not update the queue."
+      : "LuffyFlow could not update the queue."

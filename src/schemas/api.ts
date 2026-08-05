@@ -3,7 +3,7 @@ import { z } from "zod"
 import { isoDateTimeSchema } from "./common"
 import { promptRecordSchema } from "./prompt"
 import { outputRecordSchema } from "./output"
-import { autoflowSettingsSchema } from "./settings"
+import { luffyflowSettingsSchema } from "./settings"
 
 /** Public environment values are validated before they configure any transport. */
 export const appEnvironmentSchema = z.enum(["development", "test", "production"])
@@ -14,7 +14,7 @@ export const syncBatchSchema = z.object({
   requestedAt: isoDateTimeSchema,
   prompts: z.array(promptRecordSchema).max(1_000),
   outputs: z.array(outputRecordSchema).max(1_000),
-  settings: autoflowSettingsSchema.optional(),
+  settings: luffyflowSettingsSchema.optional(),
 })
 
 export const syncBatchResultSchema = z.object({

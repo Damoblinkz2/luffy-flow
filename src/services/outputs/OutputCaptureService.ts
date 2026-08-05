@@ -1,7 +1,7 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import {
   outputRecordSchema,
-  type AutoflowSettings,
+  type LuffyflowSettings,
   type DetectedOutput,
   type OutputRecord,
 } from "~/schemas"
@@ -19,7 +19,7 @@ export interface UsageEventTracker {
 }
 
 export type OutputNamingSettings = Pick<
-  AutoflowSettings,
+  LuffyflowSettings,
   "outputNamingPattern" | "sequencePadding" | "sequenceScope" | "defaultOutputFileFormat"
 >
 
@@ -41,10 +41,10 @@ export class OutputCaptureService {
     return this.runExclusive(async () => {
       const prompt = await this.prompts.getById(promptId)
       if (prompt === null) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "OUTPUT_PROMPT_MISSING",
           category: "storage_failure",
-          userMessage: "AutoFlow could not find the prompt for this output.",
+          userMessage: "LuffyFlow could not find the prompt for this output.",
         })
       }
       const fingerprint = await sha256Hex(
@@ -98,7 +98,7 @@ export class OutputCaptureService {
   ): Promise<OutputRecord> {
     const output = await this.outputs.getById(outputId)
     if (output === null) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "OUTPUT_NOT_FOUND",
         category: "invalid_data",
         userMessage: "The requested output no longer exists.",

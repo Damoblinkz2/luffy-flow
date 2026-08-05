@@ -1,4 +1,4 @@
-import { AutoflowError, toAutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError, toLuffyflowError } from "~/errors/luffyflow-error"
 import {
   extensionMessageSchema,
   type ExtensionMessage,
@@ -32,10 +32,10 @@ export class TypedMessageRouter {
     handler: Handler<TKind>,
   ): () => void {
     if (this.handlers.has(kind)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "MESSAGE_HANDLER_DUPLICATE",
         category: "invalid_data",
-        userMessage: "An AutoFlow message handler was registered twice.",
+        userMessage: "An LuffyFlow message handler was registered twice.",
         diagnosticMessage: kind,
       })
     }
@@ -44,10 +44,10 @@ export class TypedMessageRouter {
       allowedSources: new Set(allowedSources),
       invoke: (message, sender) => {
         if (message.kind !== kind) {
-          throw new AutoflowError({
+          throw new LuffyflowError({
             code: "MESSAGE_KIND_MISMATCH",
             category: "invalid_data",
-            userMessage: "AutoFlow received a mismatched message.",
+            userMessage: "LuffyFlow received a mismatched message.",
           })
         }
         return Promise.resolve(handler(message as MessageOf<TKind>, sender))
@@ -65,10 +65,10 @@ export class TypedMessageRouter {
       const correlationId = createCorrelationId()
       return this.failure(
         correlationId,
-        new AutoflowError({
+        new LuffyflowError({
           code: "MESSAGE_INVALID",
           category: "invalid_data",
-          userMessage: "AutoFlow rejected an invalid extension message.",
+          userMessage: "LuffyFlow rejected an invalid extension message.",
           diagnosticMessage: parsed.error.message,
           correlationId,
         }),
@@ -79,10 +79,10 @@ export class TypedMessageRouter {
     if (!this.isSenderConsistent(message.source, sender)) {
       return this.failure(
         message.correlationId,
-        new AutoflowError({
+        new LuffyflowError({
           code: "MESSAGE_SENDER_INVALID",
           category: "authorization",
-          userMessage: "AutoFlow rejected a message from an invalid sender context.",
+          userMessage: "LuffyFlow rejected a message from an invalid sender context.",
           correlationId: message.correlationId,
         }),
       )
@@ -90,7 +90,7 @@ export class TypedMessageRouter {
     if (message.target !== this.target) {
       return this.failure(
         message.correlationId,
-        new AutoflowError({
+        new LuffyflowError({
           code: "MESSAGE_WRONG_TARGET",
           category: "authorization",
           userMessage: "The extension message was sent to the wrong component.",
@@ -103,7 +103,7 @@ export class TypedMessageRouter {
     if (registration === undefined) {
       return this.failure(
         message.correlationId,
-        new AutoflowError({
+        new LuffyflowError({
           code: "MESSAGE_HANDLER_MISSING",
           category: "invalid_data",
           userMessage: "This extension action is not available here.",
@@ -114,7 +114,7 @@ export class TypedMessageRouter {
     if (!registration.allowedSources.has(message.source)) {
       return this.failure(
         message.correlationId,
-        new AutoflowError({
+        new LuffyflowError({
           code: "MESSAGE_SOURCE_FORBIDDEN",
           category: "authorization",
           userMessage: "This extension component cannot perform that action.",
@@ -132,10 +132,10 @@ export class TypedMessageRouter {
     } catch (error) {
       return this.failure(
         message.correlationId,
-        toAutoflowError(error, {
+        toLuffyflowError(error, {
           code: "MESSAGE_HANDLER_FAILED",
           category: "unknown",
-          userMessage: "AutoFlow could not complete the extension action.",
+          userMessage: "LuffyFlow could not complete the extension action.",
           correlationId: message.correlationId,
         }),
       )
@@ -156,7 +156,7 @@ export class TypedMessageRouter {
     )
   }
 
-  private failure(correlationId: string, error: AutoflowError): MessageResponse<never> {
+  private failure(correlationId: string, error: LuffyflowError): MessageResponse<never> {
     const serialized = error.toJSON()
     return {
       ok: false,

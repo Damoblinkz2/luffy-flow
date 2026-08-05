@@ -38,7 +38,7 @@ checkout provider can replace the mock without rewriting the subscription page.
 | POST   | `/usage/increment`      | Applies one idempotent usage event and enforces the plan limit.                  |
 
 Mock latency and failure rate use the public environment configuration from Stage 2. The seeded
-development account is `demo@autoflow.local` with password `Demo123!`.
+development account is `demo@luffyflow.local` with password `Demo123!`.
 
 ## Security boundaries
 

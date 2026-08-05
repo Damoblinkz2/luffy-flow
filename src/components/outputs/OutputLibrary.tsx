@@ -11,7 +11,7 @@ import {
 } from "~/components/common"
 import { useApplicationServices } from "~/components/common/ApplicationProviders"
 import { useAuthStore } from "~/components/auth/AuthProvider"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { TypedMessageClient } from "~/messaging/client"
 import { RuntimeMessageTransport } from "~/messaging/runtime-transport"
 import {
@@ -195,7 +195,7 @@ export const OutputLibrary = ({
     try {
       await new Promise<void>((resolve, reject) => {
         chrome.downloads.download(
-          { url, filename: "autoflow-output-metadata.json", saveAs: true },
+          { url, filename: "luffyflow-output-metadata.json", saveAs: true },
           (downloadId) => {
             const lastError = chrome.runtime.lastError
             if (lastError !== undefined || downloadId === undefined)
@@ -440,7 +440,7 @@ export const OutputLibrary = ({
 }
 
 const messageFromError = (error: unknown): string =>
-  error instanceof AutoflowError
+  error instanceof LuffyflowError
     ? error.userMessage
     : error instanceof Error
       ? error.message

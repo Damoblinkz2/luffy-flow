@@ -104,7 +104,7 @@ export class MockApiStateRepository {
           user: {
             id: DEMO_USER_ID,
             email: DEMO_ACCOUNT.email,
-            displayName: "AutoFlow Demo",
+            displayName: "LuffyFlow Demo",
             createdAt: now.toISOString(),
             updatedAt: now.toISOString(),
           },

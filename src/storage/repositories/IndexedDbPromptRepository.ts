@@ -1,4 +1,4 @@
-import type { AutoflowDatabase } from "~/storage/indexed-db/database"
+import type { LuffyflowDatabase } from "~/storage/indexed-db/database"
 import {
   promptRecordSchema,
   type PageRequest,
@@ -18,7 +18,7 @@ import { paginateRecords } from "./pagination"
 /** IndexedDB prompt persistence validates reads and uses optimistic revision updates. */
 export class IndexedDbPromptRepository implements PromptRepository {
   constructor(
-    private readonly database: Promise<AutoflowDatabase>,
+    private readonly database: Promise<LuffyflowDatabase>,
     private readonly now: () => Date = () => new Date(),
   ) {}
 

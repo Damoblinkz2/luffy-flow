@@ -45,7 +45,7 @@ export const OverviewPage = () => {
           Prepare prompts, control the durable queue, and review recent output.
         </p>
       </div>
-      <section className="grid gap-3 sm:grid-cols-3" aria-label="AutoFlow summary">
+      <section className="grid gap-3 sm:grid-cols-3" aria-label="LuffyFlow summary">
         <article className="af-card">
           <p className="af-muted">Prompt records</p>
           <p className="text-2xl font-semibold">{counts.prompts.toLocaleString()}</p>

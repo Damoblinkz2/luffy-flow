@@ -1,5 +1,5 @@
 import { BackgroundQueueCoordinator } from "~/background/BackgroundQueueCoordinator"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { createMessage } from "~/messaging/envelope"
 import { listenForRuntimeMessages, TabMessageTransport } from "~/messaging/runtime-transport"
 import { TypedMessageClient } from "~/messaging/client"
@@ -21,10 +21,10 @@ export const createBackgroundRuntime = (): BackgroundRuntime => {
   const getAuthenticatedUserId = async (): Promise<string> => {
     const session = await services.authService.restoreSession()
     if (session === null) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "AUTH_REQUIRED",
         category: "authentication",
-        userMessage: "Log in to AutoFlow before changing or starting a queue.",
+        userMessage: "Log in to LuffyFlow before changing or starting a queue.",
       })
     }
     return session.user.id
@@ -41,7 +41,7 @@ export const createBackgroundRuntime = (): BackgroundRuntime => {
       const userId = await getAuthenticatedUserId()
       const snapshot = await services.subscriptionService.load()
       if (snapshot.usage.remaining <= 0) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "USAGE_LIMIT_REACHED",
           category: "usage_limit",
           userMessage: "Your monthly prompt limit has been reached.",
@@ -95,10 +95,10 @@ export const createBackgroundRuntime = (): BackgroundRuntime => {
 const activeTabId = async (): Promise<number> => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (tab?.id === undefined) {
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "ACTIVE_TAB_UNAVAILABLE",
       category: "platform_unsupported",
-      userMessage: "AutoFlow could not find an active platform tab.",
+      userMessage: "LuffyFlow could not find an active platform tab.",
       recoverable: true,
     })
   }

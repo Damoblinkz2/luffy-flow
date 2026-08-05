@@ -25,8 +25,8 @@ export const SelectorDebugPanel = ({ registry }: SelectorDebugPanelProps) => {
   }, [registry, refreshIndex])
 
   return (
-    <section aria-labelledby="autoflow-selector-debug-title">
-      <h2 id="autoflow-selector-debug-title">Selector diagnostics</h2>
+    <section aria-labelledby="luffyflow-selector-debug-title">
+      <h2 id="luffyflow-selector-debug-title">Selector diagnostics</h2>
       <p>All Stage 6 selectors are provisional and require validation on an authenticated page.</p>
       <button type="button" onClick={refresh}>
         Refresh checks

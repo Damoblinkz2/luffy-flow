@@ -14,7 +14,7 @@ export const applySelectorOverrides = (
       query,
       kind: "css",
       confidence: "fallback",
-      note: "UNVERIFIED USER OVERRIDE: configured in AutoFlow settings.",
+      note: "UNVERIFIED USER OVERRIDE: configured in Luffyflow settings.",
     }))
     result[key] = [...candidates, ...base[key]]
   }

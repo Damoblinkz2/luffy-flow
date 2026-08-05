@@ -14,7 +14,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const location = useLocation()
 
   if (status === "idle" || status === "loading") {
-    return <p role="status">Restoring your AutoFlow session...</p>
+    return <p role="status">Restoring your LuffyFlow session...</p>
   }
   if (status !== "authenticated") {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />

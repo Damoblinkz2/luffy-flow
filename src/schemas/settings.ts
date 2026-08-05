@@ -20,7 +20,7 @@ export const platformAdapterSettingsSchema = z.object({
 })
 
 /** Settings defaults are applied by a service so migrations can distinguish missing values. */
-export const autoflowSettingsSchema = z.object({
+export const luffyflowSettingsSchema = z.object({
   schemaVersion: z.number().int().positive(),
   defaultPromptDelayMs: z.number().int().min(1_000).max(3_600_000),
   maximumRetryCount: z.number().int().min(0).max(10),
@@ -47,4 +47,4 @@ export type ThemePreference = z.infer<typeof themePreferenceSchema>
 export type SequenceScope = z.infer<typeof sequenceScopeSchema>
 export type TextExportFormat = z.infer<typeof textExportFormatSchema>
 export type PlatformAdapterSettings = z.infer<typeof platformAdapterSettingsSchema>
-export type AutoflowSettings = z.infer<typeof autoflowSettingsSchema>
+export type LuffyflowSettings = z.infer<typeof luffyflowSettingsSchema>

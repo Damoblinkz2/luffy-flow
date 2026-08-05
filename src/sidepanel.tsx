@@ -4,7 +4,7 @@ import { AutomationWorkspace } from "~/components/automation"
 import { ApplicationProviders, Button, ErrorBoundary, LoadingState } from "~/components/common"
 import { openDashboard } from "~/utils/extension-navigation"
 
-/** Side-panel body gates automation on the persisted AutoFlow account session. */
+/** Side-panel body gates automation on the persisted LuffyFlow account session. */
 const SidePanelBody = () => {
   const status = useAuthStore((state) => state.status)
   const session = useAuthStore((state) => state.session)
@@ -13,7 +13,7 @@ const SidePanelBody = () => {
   if (status !== "authenticated" || session === null) {
     return (
       <section className="af-card text-center">
-        <h1 className="text-xl font-semibold">Log in to AutoFlow</h1>
+        <h1 className="text-xl font-semibold">Log in to LuffyFlow</h1>
         <p className="af-muted my-3">
           Authentication is required before creating or starting a queue.
         </p>
@@ -31,7 +31,7 @@ const SidePanel = () => (
       <main className="min-h-screen min-w-[320px] p-3">
         <header className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-primary">AutoFlow</h1>
+            <h1 className="text-xl font-bold text-primary">LuffyFlow</h1>
             <p className="text-xs text-foreground/60">Platform workspace</p>
           </div>
           <Button variant="ghost" onClick={() => void openDashboard("/")}>

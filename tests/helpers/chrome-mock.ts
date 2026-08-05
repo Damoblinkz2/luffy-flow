@@ -25,9 +25,9 @@ export const createChromeMock = (): ChromeMock => {
   const chromeMock = {
     __controls: controls,
     runtime: {
-      id: "autoflow-test-extension",
+      id: "luffyflow-test-extension",
       lastError: undefined,
-      getURL: (path: string) => `chrome-extension://autoflow-test-extension/${path}`,
+      getURL: (path: string) => `chrome-extension://luffyflow-test-extension/${path}`,
       sendMessage: vi.fn(),
       onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
     },

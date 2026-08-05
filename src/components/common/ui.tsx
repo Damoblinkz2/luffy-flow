@@ -110,7 +110,7 @@ export const ErrorState = ({ message, onRetry }: { message: string; onRetry?: ()
   </div>
 )
 
-export const LoadingState = ({ label = "Loading AutoFlow…" }: { label?: string }) => (
+export const LoadingState = ({ label = "Loading LuffyFlow…" }: { label?: string }) => (
   <div className="space-y-3" role="status" aria-label={label}>
     <p className="af-muted">{label}</p>
     <div className="h-20 animate-pulse rounded-2xl bg-foreground/10" />

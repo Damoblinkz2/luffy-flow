@@ -1,8 +1,8 @@
-# AutoFlow
+# LuffyFlow
 
-<img src="assets/icon.png" alt="AutoFlow extension icon" width="96" height="96">
+<img src="assets/icon.png" alt="LuffyFlow extension icon" width="96" height="96">
 
-AutoFlow is a Chromium Manifest V3 extension for preparing prompt queues, submitting them sequentially on supported AI websites, and organizing detected outputs with deterministic filenames and download history.
+LuffyFlow is a Chromium Manifest V3 extension for preparing prompt queues, submitting them sequentially on supported AI websites, and organizing detected outputs with deterministic filenames and download history.
 
 The project currently supports adapters for:
 
@@ -10,7 +10,7 @@ The project currently supports adapters for:
 - Google Gemini
 - Grok, including the explicit X `/i/grok` route
 
-AutoFlow is at version `0.1.0`. It has a passing production build and automated validation pipeline, but it is not yet approved for public release. See [Production readiness](#production-readiness) and the [production checklist](docs/production-checklist.md).
+LuffyFlow is at version `0.1.0`. It has a passing production build and automated validation pipeline, but it is not yet approved for public release. See [Production readiness](#production-readiness) and the [production checklist](docs/production-checklist.md).
 
 ## What it does
 
@@ -26,7 +26,7 @@ AutoFlow is at version `0.1.0`. It has a passing production build and automated 
 - Provides a popup, side panel, dashboard tab, options page, account/subscription placeholders, and adapter diagnostics.
 - Includes a development mock API for authentication, plans, billing placeholders, and usage limits.
 
-AutoFlow does not bypass authentication, CAPTCHAs, rate limits, paywalls, or platform access controls. It automates only visible user-interface elements in a page the user can already access.
+LuffyFlow does not bypass authentication, CAPTCHAs, rate limits, paywalls, or platform access controls. It automates only visible user-interface elements in a page the user can already access.
 
 ## Current status
 
@@ -83,7 +83,7 @@ Load the generated development directory as an unpacked extension:
 2. Enable Developer mode.
 3. Choose **Load unpacked**.
 4. Select `build/chrome-mv3-dev`.
-5. Pin AutoFlow if you want quick access to its popup.
+5. Pin LuffyFlow if you want quick access to its popup.
 
 Plasmo watches source changes and rebuilds the extension. Some background, content-script, manifest, and environment changes still require reloading the extension and affected platform tabs.
 
@@ -134,14 +134,14 @@ For a production backend build:
 - Implement and validate the documented auth, billing, usage, and idempotency contracts.
 - Rebuild after environment changes; changing the settings UI alone does not grant new host permissions or recreate the active service graph until reload.
 
-## Using AutoFlow
+## Using LuffyFlow
 
 ### 1. Sign in
 
 Development mock mode seeds this account:
 
 ```text
-Email: demo@autoflow.local
+Email: demo@luffyflow.local
 Password: Demo123!
 ```
 
@@ -156,7 +156,7 @@ Navigate to an authenticated supported route:
 - `https://grok.com/`
 - `https://x.com/i/grok`
 
-Open AutoFlow's popup and use the side panel or dashboard workspace. Unsupported pages remain read-only and cannot start a queue.
+Open LuffyFlow's popup and use the side panel or dashboard workspace. Unsupported pages remain read-only and cannot start a queue.
 
 ### 3. Add prompts
 
@@ -176,7 +176,7 @@ Limits:
 
 ### 4. Run the queue
 
-Choose **Start** only after confirming the target tab and prompt order. AutoFlow processes prompts serially and defaults to an eight-second inter-prompt delay.
+Choose **Start** only after confirming the target tab and prompt order. LuffyFlow processes prompts serially and defaults to an eight-second inter-prompt delay.
 
 - Pause interrupts uncertain in-flight work and requires explicit review/retry.
 - Resume reacquires a durable queue lease.
@@ -231,7 +231,7 @@ See [architecture.md](docs/architecture.md) for the detailed design and staged d
 
 ## Permissions
 
-| Permission  | Why AutoFlow uses it                                                           |
+| Permission  | Why LuffyFlow uses it                                                          |
 | ----------- | ------------------------------------------------------------------------------ |
 | `storage`   | Sessions, settings, mock API data, durable queue state, and sequence counters. |
 | `downloads` | User-requested output exports and media downloads.                             |
@@ -297,7 +297,7 @@ Open Settings and review the adapter diagnostics. Platform DOM is undocumented a
 
 ### The queue paused after a restart or navigation
 
-Review the interrupted prompt and current platform state. Retry explicitly only when duplicate submission is safe. AutoFlow intentionally favors pausing over replaying uncertain work.
+Review the interrupted prompt and current platform state. Retry explicitly only when duplicate submission is safe. LuffyFlow intentionally favors pausing over replaying uncertain work.
 
 ### A download failed
 

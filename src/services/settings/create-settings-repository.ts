@@ -8,7 +8,7 @@ import {
   DEFAULT_SEQUENCE_PADDING,
 } from "~/constants"
 import type { PublicAppConfig } from "~/config/env"
-import { autoflowSettingsSchema, type AutoflowSettings } from "~/schemas"
+import { luffyflowSettingsSchema, type LuffyflowSettings } from "~/schemas"
 import type { KeyValueStore } from "~/storage/contracts"
 import { LocalSettingsRepository } from "~/storage/repositories/LocalSettingsRepository"
 import { STORAGE_KEYS } from "~/storage/storage-keys"
@@ -22,18 +22,18 @@ export const createSettingsRepository = (
   config: PublicAppConfig,
   clock: Clock = systemClock,
 ): LocalSettingsRepository => {
-  const namespace = new VersionedStorageNamespace<AutoflowSettings>({
+  const namespace = new VersionedStorageNamespace<LuffyflowSettings>({
     key: STORAGE_KEYS.settings,
     currentVersion: CURRENT_STORAGE_SCHEMA_VERSION,
-    schema: autoflowSettingsSchema,
+    schema: luffyflowSettingsSchema,
     store,
     now: () => clock.now(),
   })
   return new LocalSettingsRepository(namespace, () => createDefaultSettings(config, clock.now()))
 }
 
-const createDefaultSettings = (config: PublicAppConfig, now: Date): AutoflowSettings =>
-  autoflowSettingsSchema.parse({
+const createDefaultSettings = (config: PublicAppConfig, now: Date): LuffyflowSettings =>
+  luffyflowSettingsSchema.parse({
     schemaVersion: CURRENT_STORAGE_SCHEMA_VERSION,
     defaultPromptDelayMs: DEFAULT_PROMPT_DELAY_MS,
     maximumRetryCount: DEFAULT_MAXIMUM_RETRY_COUNT,

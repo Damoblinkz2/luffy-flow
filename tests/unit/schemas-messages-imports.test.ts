@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { createMessage } from "~/messaging/envelope"
 import {
-  autoflowSettingsSchema,
+  luffyflowSettingsSchema,
   extensionMessageSchema,
   outputRecordSchema,
   promptRecordSchema,
@@ -20,7 +20,7 @@ describe("runtime schemas and messages", () => {
     expect(() => promptRecordSchema.parse(promptFixture({ text: " " }))).toThrow()
     expect(() => outputRecordSchema.parse(outputFixture({ generatedFilename: "" }))).toThrow()
     expect(() =>
-      autoflowSettingsSchema.parse({ schemaVersion: 1, maximumRetryCount: 99 }),
+      luffyflowSettingsSchema.parse({ schemaVersion: 1, maximumRetryCount: 99 }),
     ).toThrow()
   })
 

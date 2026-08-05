@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { queueStateSchema, type QueueRunStatus, type QueueState } from "~/schemas"
 
 const ALLOWED_TRANSITIONS: Readonly<Record<QueueRunStatus, readonly QueueRunStatus[]>> = {
@@ -16,7 +16,7 @@ const ALLOWED_TRANSITIONS: Readonly<Record<QueueRunStatus, readonly QueueRunStat
 export class QueueStateMachine {
   transition(queue: QueueState, status: QueueRunStatus, pauseReason?: string): QueueState {
     if (!ALLOWED_TRANSITIONS[queue.status].includes(status)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_TRANSITION_INVALID",
         category: "invalid_data",
         userMessage: `The queue cannot move from ${queue.status} to ${status}.`,
@@ -25,7 +25,7 @@ export class QueueStateMachine {
     }
     const candidate: Record<string, unknown> = { ...queue, status }
     if (status === "paused" || status === "paused_recovery") {
-      candidate.pauseReason = pauseReason ?? "Paused by AutoFlow."
+      candidate.pauseReason = pauseReason ?? "Paused by LuffyFlow."
     } else {
       delete candidate.pauseReason
     }

@@ -4,7 +4,7 @@ import styleText from "data-text:~/styles/base.css"
 import { InPagePanelFallback } from "~/components/automation"
 import { ErrorBoundary } from "~/components/common"
 
-const FALLBACK_HOST_ID = "autoflow-in-page-panel-host"
+const FALLBACK_HOST_ID = "luffyflow-in-page-panel-host"
 
 /** Unsupported side-panel browsers receive the same workspace inside an isolated Shadow DOM. */
 export const mountInPagePanelFallback = (): (() => void) => {

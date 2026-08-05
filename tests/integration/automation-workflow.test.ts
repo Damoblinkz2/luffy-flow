@@ -52,7 +52,7 @@ describe("login-to-download automation workflow", () => {
     })
     const tokenProvider = new DelegatingAuthTokenProvider()
     const apiClient = new ApiClient({
-      baseUrl: "https://mock.autoflow.test",
+      baseUrl: "https://mock.luffyflow.test",
       defaultTimeoutMs: 5_000,
       maximumSafeRetryCount: 1,
       retryBaseDelayMs: 0,

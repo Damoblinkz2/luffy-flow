@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import {
   promptTextSchema,
   queueLeaseSchema,
@@ -41,7 +41,7 @@ export class QueueService {
   async create(input: CreateQueueInput): Promise<QueueState> {
     const current = await this.queues.getActive()
     if (current !== null && !TERMINAL_QUEUE_STATUSES.has(current.status)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_ACTIVE_EXISTS",
         category: "invalid_data",
         userMessage: "Finish or stop the current queue before creating another one.",
@@ -53,7 +53,7 @@ export class QueueService {
       createPromptRecord(input, promptTextSchema.parse(text), sessionId, index, now),
     )
     if (promptRecords.length === 0) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_EMPTY",
         category: "invalid_data",
         userMessage: "Add at least one prompt before creating a queue.",
@@ -109,7 +109,7 @@ export class QueueService {
   ): Promise<QueueState> {
     const queue = await this.requireEditableQueue(queueId, expectedRevision)
     if (promptTexts.length === 0) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_ADD_EMPTY",
         category: "invalid_data",
         userMessage: "Add at least one prompt.",
@@ -183,7 +183,7 @@ export class QueueService {
       new Set(orderedPromptIds).size !== orderedPromptIds.length ||
       orderedPromptIds.some((id) => !queue.promptIds.includes(id))
     ) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_REORDER_INVALID",
         category: "invalid_data",
         userMessage: "The reordered prompt list does not match this queue.",
@@ -240,7 +240,7 @@ export class QueueService {
       queue.lease.ownerId !== ownerId &&
       Date.parse(queue.lease.expiresAt) > this.clock.now().getTime()
     ) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_LEASE_OWNER_MISMATCH",
         category: "authorization",
         userMessage: "A stale worker cannot stop this queue.",
@@ -389,7 +389,7 @@ export class QueueService {
   async retryPrompt(promptId: string, maximumRetryCount: number): Promise<PromptRecord> {
     const prompt = await this.requirePrompt(promptId)
     if (prompt.status !== "failed" || prompt.retryCount >= maximumRetryCount) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "PROMPT_RETRY_NOT_ALLOWED",
         category: "invalid_data",
         userMessage: "This prompt cannot be retried again.",
@@ -408,7 +408,7 @@ export class QueueService {
   async skipPrompt(promptId: string): Promise<PromptRecord> {
     const prompt = await this.requirePrompt(promptId)
     if (prompt.status !== "queued" && prompt.status !== "failed") {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "PROMPT_SKIP_NOT_ALLOWED",
         category: "invalid_data",
         userMessage: "This prompt can no longer be skipped.",
@@ -497,10 +497,10 @@ export class QueueService {
       lease.generation !== generation ||
       Date.parse(lease.expiresAt) <= this.clock.now().getTime()
     ) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_LEASE_INVALID",
         category: "authorization",
-        userMessage: "AutoFlow rejected a stale queue command.",
+        userMessage: "LuffyFlow rejected a stale queue command.",
       })
     }
     return queue
@@ -509,17 +509,17 @@ export class QueueService {
   private async requireQueue(queueId: string, expectedRevision?: number): Promise<QueueState> {
     const queue = await this.queues.getActive()
     if (queue === null || queue.id !== queueId) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_NOT_FOUND",
         category: "invalid_data",
         userMessage: "The requested queue no longer exists.",
       })
     }
     if (expectedRevision !== undefined && queue.revision !== expectedRevision) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_REVISION_CONFLICT",
         category: "storage_failure",
-        userMessage: "The queue changed in another AutoFlow context. Refresh and try again.",
+        userMessage: "The queue changed in another LuffyFlow context. Refresh and try again.",
         recoverable: true,
       })
     }
@@ -529,10 +529,10 @@ export class QueueService {
   private async requireQueueForSession(sessionId: string): Promise<QueueState> {
     const queue = await this.queues.getActive()
     if (queue === null || queue.sessionId !== sessionId) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_SESSION_MISSING",
         category: "storage_failure",
-        userMessage: "AutoFlow could not find the prompt's queue session.",
+        userMessage: "LuffyFlow could not find the prompt's queue session.",
       })
     }
     return queue
@@ -548,7 +548,7 @@ export class QueueService {
       queue.status !== "paused" &&
       queue.status !== "paused_recovery"
     ) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "QUEUE_EDIT_LOCKED",
         category: "invalid_data",
         userMessage: "Pause the queue before changing its prompts.",
@@ -569,7 +569,7 @@ export class QueueService {
   private async requirePrompt(promptId: string): Promise<PromptRecord> {
     const prompt = await this.prompts.getById(promptId)
     if (prompt === null) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "PROMPT_NOT_FOUND",
         category: "invalid_data",
         userMessage: "The requested prompt no longer exists.",
@@ -618,7 +618,7 @@ const isUnfinished = (status: PromptStatus): boolean =>
   status === "failed"
 
 const promptLockedError = () =>
-  new AutoflowError({
+  new LuffyflowError({
     code: "PROMPT_EDIT_LOCKED",
     category: "invalid_data",
     userMessage: "Only draft or queued prompts can be changed.",

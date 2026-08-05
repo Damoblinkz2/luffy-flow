@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type { PageRequest, PageResult } from "~/schemas"
 
 const CURSOR_PREFIX = "offset:"
@@ -24,7 +24,7 @@ const decodeCursor = (cursor: string | undefined): number => {
 }
 
 const invalidCursorError = () =>
-  new AutoflowError({
+  new LuffyflowError({
     code: "PAGINATION_CURSOR_INVALID",
     category: "invalid_data",
     userMessage: "The requested history page is invalid.",

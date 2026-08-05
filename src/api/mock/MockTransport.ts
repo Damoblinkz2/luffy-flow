@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type {
   ApiTransport,
   HttpMethod,
@@ -44,7 +44,7 @@ export class MockTransport implements ApiTransport {
   register(method: HttpMethod, path: string, handler: MockRouteHandler): () => void {
     const key = this.routeKey(method, path)
     if (this.routes.has(key)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "MOCK_ROUTE_DUPLICATE",
         category: "invalid_data",
         userMessage: "A mock API route was registered more than once.",
@@ -86,7 +86,7 @@ export class MockTransport implements ApiTransport {
       })
       return this.jsonResponse(result.status ?? 200, result.body, result.headers)
     } catch (error) {
-      if (error instanceof AutoflowError) {
+      if (error instanceof LuffyflowError) {
         return this.jsonResponse(this.statusForError(error), {
           code: error.code,
           category: error.category,
@@ -129,7 +129,7 @@ export class MockTransport implements ApiTransport {
     }
   }
 
-  private statusForError(error: AutoflowError): number {
+  private statusForError(error: LuffyflowError): number {
     if (error.category === "authentication") return 401
     if (error.category === "authorization") return 403
     if (error.category === "usage_limit") return 429

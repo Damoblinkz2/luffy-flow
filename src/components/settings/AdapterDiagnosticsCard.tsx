@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 
 import { Badge, Button, ErrorState } from "~/components/common"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { useActivePlatform } from "~/hooks/useActivePlatform"
 import { TypedMessageClient } from "~/messaging/client"
 import { RuntimeMessageTransport } from "~/messaging/runtime-transport"
@@ -41,9 +41,9 @@ export const AdapterDiagnosticsCard = ({ source }: AdapterDiagnosticsCardProps) 
       )
     } catch (caught) {
       setError(
-        caught instanceof AutoflowError
+        caught instanceof LuffyflowError
           ? caught.userMessage
-          : "The active tab did not respond. Reload it after updating AutoFlow.",
+          : "The active tab did not respond. Reload it after updating LuffyFlow.",
       )
     } finally {
       setBusy(false)

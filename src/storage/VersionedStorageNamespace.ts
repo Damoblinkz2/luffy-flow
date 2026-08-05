@@ -1,4 +1,4 @@
-import { AutoflowError, toAutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError, toLuffyflowError } from "~/errors/luffyflow-error"
 import { storedEnvelopeSchema } from "~/schemas/storage"
 
 import type { StorageMigration, VersionedNamespace, VersionedNamespaceOptions } from "./contracts"
@@ -20,10 +20,10 @@ export class VersionedStorageNamespace<T> implements VersionedNamespace<T> {
 
       const envelope = storedEnvelopeSchema.parse(stored)
       if (envelope.schemaVersion > this.options.currentVersion) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "STORAGE_VERSION_NEWER",
           category: "storage_failure",
-          userMessage: "This AutoFlow data was created by a newer extension version.",
+          userMessage: "This LuffyFlow data was created by a newer extension version.",
           diagnosticMessage: `Stored version ${envelope.schemaVersion}; supported version ${this.options.currentVersion}.`,
           details: { key: this.options.key },
         })
@@ -34,10 +34,10 @@ export class VersionedStorageNamespace<T> implements VersionedNamespace<T> {
       if (envelope.schemaVersion < this.options.currentVersion) await this.set(parsedValue)
       return parsedValue
     } catch (error) {
-      throw toAutoflowError(error, {
+      throw toLuffyflowError(error, {
         code: "STORAGE_READ_FAILED",
         category: "storage_failure",
-        userMessage: "AutoFlow could not read its saved data.",
+        userMessage: "LuffyFlow could not read its saved data.",
         details: { key: this.options.key },
       })
     }
@@ -53,10 +53,10 @@ export class VersionedStorageNamespace<T> implements VersionedNamespace<T> {
       })
       return parsedValue
     } catch (error) {
-      throw toAutoflowError(error, {
+      throw toLuffyflowError(error, {
         code: "STORAGE_WRITE_FAILED",
         category: "storage_failure",
-        userMessage: "AutoFlow could not save local data.",
+        userMessage: "LuffyFlow could not save local data.",
         details: { key: this.options.key },
       })
     }
@@ -66,10 +66,10 @@ export class VersionedStorageNamespace<T> implements VersionedNamespace<T> {
     try {
       await this.options.store.remove(this.options.key)
     } catch (error) {
-      throw toAutoflowError(error, {
+      throw toLuffyflowError(error, {
         code: "STORAGE_REMOVE_FAILED",
         category: "storage_failure",
-        userMessage: "AutoFlow could not remove local data.",
+        userMessage: "LuffyFlow could not remove local data.",
         details: { key: this.options.key },
       })
     }
@@ -81,10 +81,10 @@ export class VersionedStorageNamespace<T> implements VersionedNamespace<T> {
     while (currentVersion < this.options.currentVersion) {
       const migration = this.migrations.get(currentVersion)
       if (migration === undefined || migration.toVersion !== currentVersion + 1) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "STORAGE_MIGRATION_MISSING",
           category: "storage_failure",
-          userMessage: "AutoFlow could not upgrade its saved data.",
+          userMessage: "LuffyFlow could not upgrade its saved data.",
           diagnosticMessage: `No contiguous migration from version ${currentVersion}.`,
           details: { key: this.options.key },
         })
@@ -101,10 +101,10 @@ export class VersionedStorageNamespace<T> implements VersionedNamespace<T> {
     const indexed = new Map<number, StorageMigration>()
     for (const migration of migrations) {
       if (migration.toVersion !== migration.fromVersion + 1 || indexed.has(migration.fromVersion)) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "STORAGE_MIGRATION_INVALID",
           category: "invalid_data",
-          userMessage: "The AutoFlow storage migration configuration is invalid.",
+          userMessage: "The LuffyFlow storage migration configuration is invalid.",
         })
       }
       indexed.set(migration.fromVersion, migration)

@@ -38,7 +38,7 @@ export const SubscriptionPage = ({ store }: SubscriptionPageProps) => {
       <header>
         <h1 className="text-2xl font-semibold">Subscription</h1>
         <p className="text-sm text-foreground/70">
-          Payment integration is a placeholder. AutoFlow never collects card details.
+          Payment integration is a placeholder. LuffyFlow never collects card details.
         </p>
       </header>
 

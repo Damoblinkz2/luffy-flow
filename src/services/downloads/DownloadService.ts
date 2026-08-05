@@ -1,6 +1,6 @@
 import JSZip from "jszip"
 
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type { TypedMessageRouter } from "~/messaging/router"
 import type { OutputRecord, TextExportFormat } from "~/schemas"
 import { buildSafeFilename } from "~/services/naming/filename"
@@ -45,7 +45,7 @@ export class DownloadService {
     const records = await Promise.all(outputIds.map((id) => this.options.outputs.getById(id)))
     const outputs = records.filter((record): record is OutputRecord => record !== null)
     if (outputs.length !== outputIds.length || outputs.some((output) => output.userId !== userId)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "DOWNLOAD_RECORD_FORBIDDEN",
         category: "authorization",
         userMessage: "One or more selected outputs are unavailable to this account.",
@@ -109,7 +109,7 @@ export class DownloadService {
     for (const output of outputs)
       archive.file(filenameForText(output, format), renderText(output, format))
     const base64 = await archive.generateAsync({ type: "base64", compression: "DEFLATE" })
-    const filename = buildSafeFilename(requestedName ?? "autoflow-outputs", ".zip")
+    const filename = buildSafeFilename(requestedName ?? "luffyflow-outputs", ".zip")
     return startBrowserDownload({
       url: `data:application/zip;base64,${base64}`,
       filename,
@@ -179,7 +179,7 @@ const startBrowserDownload = (options: chrome.downloads.DownloadOptions): Promis
       const lastError = chrome.runtime.lastError
       if (lastError !== undefined || downloadId === undefined) {
         reject(
-          new AutoflowError({
+          new LuffyflowError({
             code: "BROWSER_DOWNLOAD_FAILED",
             category: "download_failure",
             userMessage: "The browser could not start this download.",
@@ -231,7 +231,7 @@ const mimeForFormat = (format: TextExportFormat): string => {
 const csvCell = (value: string): string => `"${value.replaceAll('"', '""')}"`
 
 const unavailableMediaError = () =>
-  new AutoflowError({
+  new LuffyflowError({
     code: "DOWNLOAD_URL_UNAVAILABLE",
     category: "download_failure",
     userMessage:

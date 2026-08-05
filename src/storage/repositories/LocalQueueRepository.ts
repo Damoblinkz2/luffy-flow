@@ -1,4 +1,4 @@
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { queueStateSchema, type QueueLease, type QueueState } from "~/schemas"
 import type { VersionedNamespace } from "~/storage/contracts"
 import type { QueueRepository } from "~/storage/repositories/contracts"
@@ -37,10 +37,10 @@ export class LocalQueueRepository implements QueueRepository {
         ) {
           return this.namespace.set(queueStateSchema.parse({ ...queue, revision: 0 }))
         }
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "QUEUE_ALREADY_EXISTS",
           category: "invalid_data",
-          userMessage: "Another AutoFlow queue already owns the durable queue slot.",
+          userMessage: "Another LuffyFlow queue already owns the durable queue slot.",
           recoverable: true,
         })
       }
@@ -67,10 +67,10 @@ export class LocalQueueRepository implements QueueRepository {
       const current = await this.requireQueue(queueId)
       const now = this.clock.now()
       if (Date.parse(candidate.expiresAt) <= now.getTime()) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "QUEUE_LEASE_EXPIRED",
           category: "invalid_data",
-          userMessage: "AutoFlow could not acquire an already-expired queue lease.",
+          userMessage: "LuffyFlow could not acquire an already-expired queue lease.",
         })
       }
       if (
@@ -78,19 +78,19 @@ export class LocalQueueRepository implements QueueRepository {
         current.lease.ownerId !== candidate.ownerId &&
         Date.parse(current.lease.expiresAt) > now.getTime()
       ) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "QUEUE_LEASE_HELD",
           category: "storage_failure",
-          userMessage: "This queue is already running in another AutoFlow worker.",
+          userMessage: "This queue is already running in another LuffyFlow worker.",
           recoverable: true,
         })
       }
       const minimumGeneration = (current.lease?.generation ?? -1) + 1
       if (candidate.generation < minimumGeneration) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "QUEUE_LEASE_STALE",
           category: "authorization",
-          userMessage: "AutoFlow rejected a stale queue lease.",
+          userMessage: "LuffyFlow rejected a stale queue lease.",
         })
       }
       return this.namespace.set(
@@ -109,10 +109,10 @@ export class LocalQueueRepository implements QueueRepository {
       const current = await this.requireQueue(queueId)
       if (current.lease === undefined) return
       if (current.lease.ownerId !== ownerId) {
-        throw new AutoflowError({
+        throw new LuffyflowError({
           code: "QUEUE_LEASE_OWNER_MISMATCH",
           category: "authorization",
-          userMessage: "AutoFlow rejected a lease release from a stale worker.",
+          userMessage: "LuffyFlow rejected a lease release from a stale worker.",
         })
       }
       await this.namespace.set(

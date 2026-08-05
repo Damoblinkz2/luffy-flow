@@ -6,7 +6,7 @@ import type { ApiTransport } from "~/api/client/contracts"
 import { createMockApiRuntime } from "~/api/mock/create-mock-api"
 import { AuthApiClient } from "~/api/modules/auth-api"
 import { DEMO_ACCOUNT } from "~/constants"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import { Logger } from "~/logging/logger"
 import { authSessionSchema } from "~/schemas"
 import { AuthService } from "~/services/auth/auth-service"
@@ -37,7 +37,7 @@ describe("mock authentication and auth store", () => {
     })
     const tokenProvider = new DelegatingAuthTokenProvider()
     const client = new ApiClient({
-      baseUrl: "https://mock.autoflow.test",
+      baseUrl: "https://mock.luffyflow.test",
       defaultTimeoutMs: 5_000,
       maximumSafeRetryCount: 2,
       retryBaseDelayMs: 0,
@@ -63,7 +63,7 @@ describe("mock authentication and auth store", () => {
   })
 
   it("surfaces safe login errors in the store", async () => {
-    const error = new AutoflowError({
+    const error = new LuffyflowError({
       code: "AUTH_INVALID_CREDENTIALS",
       category: "authentication",
       userMessage: "The email or password is incorrect.",
@@ -91,7 +91,7 @@ describe("API client error handling", () => {
       .mockResolvedValueOnce({ status: 503, headers: {}, bodyText: "{}" })
       .mockResolvedValueOnce({ status: 200, headers: {}, bodyText: '{"value":"ready"}' })
     const client = new ApiClient({
-      baseUrl: "https://api.autoflow.test",
+      baseUrl: "https://api.luffyflow.test",
       defaultTimeoutMs: 1_000,
       maximumSafeRetryCount: 1,
       retryBaseDelayMs: 0,
@@ -113,7 +113,7 @@ describe("API client error handling", () => {
       bodyText: "not-json",
     })
     const client = new ApiClient({
-      baseUrl: "https://api.autoflow.test",
+      baseUrl: "https://api.luffyflow.test",
       defaultTimeoutMs: 1_000,
       maximumSafeRetryCount: 3,
       retryBaseDelayMs: 0,

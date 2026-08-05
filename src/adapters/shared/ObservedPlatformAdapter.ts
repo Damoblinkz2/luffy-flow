@@ -383,7 +383,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     if (this.hasStatus(this.selectors.rateLimitIndicator, this.textSignals.rateLimited)) {
       throw new AdapterFault({
         code: "rate_limited",
-        message: "The platform is rate limiting requests. AutoFlow paused safely.",
+        message: "The platform is rate limiting requests. LuffyFlow paused safely.",
         retryAfterMs: 60_000,
       })
     }

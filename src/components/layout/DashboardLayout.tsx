@@ -20,7 +20,7 @@ export const DashboardLayout = () => {
     <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
       <aside className="border-b bg-surface p-4 md:min-h-screen md:border-b-0 md:border-r">
         <div className="mb-5">
-          <p className="text-xl font-bold text-primary">AutoFlow</p>
+          <p className="text-xl font-bold text-primary">LuffyFlow</p>
           <p className="text-xs text-foreground/60">Prompt automation workspace</p>
         </div>
         <nav className="flex gap-1 overflow-x-auto md:flex-col" aria-label="Dashboard sections">

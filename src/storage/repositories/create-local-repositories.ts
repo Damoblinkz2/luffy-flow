@@ -1,7 +1,7 @@
 import { CURRENT_STORAGE_SCHEMA_VERSION } from "~/constants"
 import { queueStateSchema, type QueueState, type SequenceCounter } from "~/schemas"
 import type { KeyValueStore } from "~/storage/contracts"
-import { openAutoflowDatabase } from "~/storage/indexed-db/database"
+import { openLuffyflowDatabase } from "~/storage/indexed-db/database"
 import { IndexedDbOutputRepository } from "~/storage/repositories/IndexedDbOutputRepository"
 import { IndexedDbPromptRepository } from "~/storage/repositories/IndexedDbPromptRepository"
 import { LocalQueueRepository } from "~/storage/repositories/LocalQueueRepository"
@@ -20,7 +20,7 @@ export const createLocalRepositories = (
   clock: Clock = systemClock,
   databaseName?: string,
 ) => {
-  const database = openAutoflowDatabase(databaseName)
+  const database = openLuffyflowDatabase(databaseName)
   const queueNamespace = new VersionedStorageNamespace<QueueState>({
     key: STORAGE_KEYS.queueState,
     currentVersion: CURRENT_STORAGE_SCHEMA_VERSION,

@@ -2,7 +2,7 @@ import { type z, ZodError } from "zod"
 
 import type { MockRequestContext } from "~/api/mock/MockTransport"
 import { type MockTransport } from "~/api/mock/MockTransport"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import {
   authResponseSchema,
   forgotPasswordRequestSchema,
@@ -111,7 +111,7 @@ export const registerMockApiRoutes = (
         const originalLength = state.sessions.length
         state.sessions = state.sessions.filter((session) => session.accessTokenHash !== accessHash)
         if (state.sessions.length === originalLength) {
-          throw unauthorized("AUTH_SESSION_INVALID", "Your AutoFlow session is no longer valid.")
+          throw unauthorized("AUTH_SESSION_INVALID", "Your LuffyFlow session is no longer valid.")
         }
         return { state, result: { status: 204 } }
       })
@@ -123,7 +123,7 @@ export const registerMockApiRoutes = (
         const now = clock.now()
         const existing = state.sessions.find((session) => session.refreshTokenHash === refreshHash)
         if (existing === undefined || Date.parse(existing.refreshExpiresAt) <= now.getTime()) {
-          throw unauthorized("AUTH_REFRESH_EXPIRED", "Your AutoFlow session has expired.")
+          throw unauthorized("AUTH_REFRESH_EXPIRED", "Your LuffyFlow session has expired.")
         }
         const account = requireAccount(state, existing.userId)
         const issued = await issueTokens(account.user.id, now)
@@ -208,7 +208,7 @@ export const registerMockApiRoutes = (
         if (state.usageIdempotencyKeys.includes(scopedKey))
           return { state, result: { body: usage } }
         if (usage.used >= usage.limit) {
-          throw new AutoflowError({
+          throw new LuffyflowError({
             code: "USAGE_LIMIT_REACHED",
             category: "usage_limit",
             userMessage: "Your monthly prompt limit has been reached.",
@@ -233,7 +233,7 @@ const parseBody = <T>(schema: z.ZodType<T>, body: unknown): T => {
     return schema.parse(body)
   } catch (error) {
     if (error instanceof ZodError) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "VALIDATION_FAILED",
         category: "invalid_data",
         userMessage: "The submitted information is invalid.",
@@ -273,7 +273,7 @@ const authenticate = async (
   const state = await repository.read()
   const session = state.sessions.find((candidate) => candidate.accessTokenHash === accessHash)
   if (session === undefined || Date.parse(session.accessExpiresAt) <= clock.now().getTime()) {
-    throw unauthorized("AUTH_ACCESS_EXPIRED", "Your AutoFlow session has expired.")
+    throw unauthorized("AUTH_ACCESS_EXPIRED", "Your LuffyFlow session has expired.")
   }
   return { state, account: requireAccount(state, session.userId) }
 }
@@ -293,7 +293,7 @@ const readIdempotencyKey = (context: MockRequestContext): string => {
     ([header]) => header.toLowerCase() === "idempotency-key",
   )?.[1]
   if (key === undefined || key.length === 0 || key.length > 255) {
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "IDEMPOTENCY_KEY_REQUIRED",
       category: "invalid_data",
       userMessage: "A valid usage event identifier is required.",
@@ -312,10 +312,10 @@ const requireAccount = (state: MockApiState, userId: string): MockAccount => {
 const requireSubscription = (state: MockApiState, userId: string) => {
   const subscription = state.subscriptions.find((candidate) => candidate.userId === userId)
   if (subscription === undefined) {
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "SUBSCRIPTION_MISSING",
       category: "subscription",
-      userMessage: "AutoFlow could not find your subscription.",
+      userMessage: "LuffyFlow could not find your subscription.",
     })
   }
   return subscription
@@ -324,20 +324,20 @@ const requireSubscription = (state: MockApiState, userId: string) => {
 const requireUsage = (state: MockApiState, userId: string) => {
   const usage = state.usage.find((candidate) => candidate.userId === userId)
   if (usage === undefined) {
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "USAGE_MISSING",
       category: "subscription",
-      userMessage: "AutoFlow could not find your usage record.",
+      userMessage: "LuffyFlow could not find your usage record.",
     })
   }
   return usage
 }
 
-const unauthorized = (code: string, userMessage: string): AutoflowError =>
-  new AutoflowError({ code, category: "authentication", userMessage, recoverable: false })
+const unauthorized = (code: string, userMessage: string): LuffyflowError =>
+  new LuffyflowError({ code, category: "authentication", userMessage, recoverable: false })
 
-const conflict = (code: string, userMessage: string): AutoflowError =>
-  new AutoflowError({ code, category: "invalid_data", userMessage, recoverable: false })
+const conflict = (code: string, userMessage: string): LuffyflowError =>
+  new LuffyflowError({ code, category: "invalid_data", userMessage, recoverable: false })
 
 const pruneExpiredSessions = (sessions: MockSession[], now: Date): MockSession[] =>
   sessions.filter((session) => Date.parse(session.refreshExpiresAt) > now.getTime())

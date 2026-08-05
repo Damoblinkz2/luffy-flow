@@ -1,7 +1,7 @@
 import { MAX_FILENAME_LENGTH } from "~/constants"
-import { AutoflowError } from "~/errors/autoflow-error"
+import { LuffyflowError } from "~/errors/luffyflow-error"
 import type {
-  AutoflowSettings,
+  LuffyflowSettings,
   DetectedOutput,
   OutputType,
   PromptRecord,
@@ -50,7 +50,7 @@ export class OutputNamingService {
     prompt: PromptRecord,
     detected: DetectedOutput,
     settings: Pick<
-      AutoflowSettings,
+      LuffyflowSettings,
       "outputNamingPattern" | "sequencePadding" | "sequenceScope" | "defaultOutputFileFormat"
     >,
   ): Promise<GeneratedOutputName> {
@@ -88,7 +88,7 @@ export class OutputNamingService {
     const extensionMatch = /\.[a-z0-9]{1,16}$/i.exec(currentFilename)
     const normalized = normalizeRenamedFilename(requestedName, extensionMatch?.[0] ?? ".bin")
     if (await this.outputs.isFilenameTaken(normalized, outputId)) {
-      throw new AutoflowError({
+      throw new LuffyflowError({
         code: "OUTPUT_FILENAME_DUPLICATE",
         category: "invalid_data",
         userMessage: "Another output already uses that filename.",
@@ -110,10 +110,10 @@ export class OutputNamingService {
       )
       if (!(await this.outputs.isFilenameTaken(candidate))) return candidate
     }
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "OUTPUT_FILENAME_EXHAUSTED",
       category: "storage_failure",
-      userMessage: "AutoFlow could not allocate a unique output filename.",
+      userMessage: "LuffyFlow could not allocate a unique output filename.",
     })
   }
 }
@@ -133,7 +133,7 @@ const validatePattern = (pattern: string): void => {
   )
   const unmatchedBraces = /[{}]/.exec(pattern.replace(/\{[^{}]+\}/g, "")) !== null
   if (unsupported !== undefined || unmatchedBraces) {
-    throw new AutoflowError({
+    throw new LuffyflowError({
       code: "OUTPUT_NAMING_TOKEN_INVALID",
       category: "invalid_data",
       userMessage:
