@@ -80,6 +80,7 @@ export const ProgressBar = ({ value, label }: { value: number; label: string }) 
   )
 }
 
+/** Gives empty collections a consistent explanation and optional next action. */
 export const EmptyState = ({
   title,
   description,
@@ -96,6 +97,7 @@ export const EmptyState = ({
   </div>
 )
 
+/** Presents a recoverable region-level failure without replacing the surrounding page. */
 export const ErrorState = ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
   <div
     className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
@@ -110,6 +112,7 @@ export const ErrorState = ({ message, onRetry }: { message: string; onRetry?: ()
   </div>
 )
 
+/** Provides an accessible skeleton and status label for asynchronous page regions. */
 export const LoadingState = ({ label = "Loading LuffyFlow…" }: { label?: string }) => (
   <div className="space-y-3" role="status" aria-label={label}>
     <p className="af-muted">{label}</p>

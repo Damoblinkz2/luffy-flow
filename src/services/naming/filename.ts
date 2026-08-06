@@ -26,6 +26,7 @@ export const buildSafeFilename = (base: string, extension: string): string => {
   return `${safeBase || "untitled"}${normalizedExtension}`
 }
 
+/** Converts an extension to a safe, lowercase dotted suffix with a binary fallback. */
 export const normalizeExtension = (extension: string): string => {
   const candidate = extension.startsWith(".")
     ? extension.toLowerCase()

@@ -9,6 +9,7 @@ export const recordMissingError = (entity: "prompt" | "output" | "queue", id: st
     details: { id },
   })
 
+/** Reports the expected and actual revisions so callers can recover from a stale write. */
 export const revisionConflictError = (
   entity: "prompt" | "output" | "queue",
   id: string,

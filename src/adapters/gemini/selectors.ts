@@ -1,5 +1,6 @@
 import type { AdapterSelectorConfig, AdapterTextSignals } from "~/adapters/contracts"
 
+/** Describes a likely Gemini selector whose stability still needs real-site verification. */
 const provisional = (query: string, assumption: string) => ({
   query,
   kind: "css" as const,
@@ -7,6 +8,7 @@ const provisional = (query: string, assumption: string) => ({
   note: `UNVERIFIED 2026-08-03: ${assumption}`,
 })
 
+/** Marks a lower-confidence selector that is tried only after stronger candidates fail. */
 const fallback = (query: string, assumption: string) => ({
   query,
   kind: "css" as const,

@@ -24,8 +24,10 @@ interface RegisteredHandler {
 export class TypedMessageRouter {
   private readonly handlers = new Map<MessageKind, RegisteredHandler>()
 
+  /** Pins this router to the extension component allowed to receive its handlers. */
   constructor(private readonly target: MessageTarget) {}
 
+  /** Adds one source-restricted handler and returns a callback that removes only that handler. */
   register<TKind extends MessageKind>(
     kind: TKind,
     allowedSources: readonly MessageSource[],
@@ -56,6 +58,7 @@ export class TypedMessageRouter {
     return () => this.handlers.delete(kind)
   }
 
+  /** Validates an untrusted envelope, sender identity, target, and source before dispatch. */
   async route(
     rawMessage: unknown,
     sender: chrome.runtime.MessageSender,
@@ -156,6 +159,7 @@ export class TypedMessageRouter {
     )
   }
 
+  /** Serializes a domain error without leaking stack traces or arbitrary details across contexts. */
   private failure(correlationId: string, error: LuffyflowError): MessageResponse<never> {
     const serialized = error.toJSON()
     return {

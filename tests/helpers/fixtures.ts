@@ -9,8 +9,10 @@ export const ids = {
 } as const
 
 export const fixedNow = new Date("2026-08-04T12:34:56.000Z")
+/** Returns a fresh Date on every call so tests cannot mutate shared clock state. */
 export const fixedClock = { now: (): Date => new Date(fixedNow) }
 
+/** Builds a valid prompt and lets each test override only fields relevant to its scenario. */
 export const promptFixture = (overrides: Partial<PromptRecord> = {}): PromptRecord => ({
   id: ids.prompt,
   userId: ids.user,
@@ -29,6 +31,7 @@ export const promptFixture = (overrides: Partial<PromptRecord> = {}): PromptReco
   ...overrides,
 })
 
+/** Builds a valid queue connected to the shared prompt fixture identifiers. */
 export const queueFixture = (overrides: Partial<QueueState> = {}): QueueState => ({
   id: ids.queue,
   userId: ids.user,
@@ -43,6 +46,7 @@ export const queueFixture = (overrides: Partial<QueueState> = {}): QueueState =>
   ...overrides,
 })
 
+/** Builds a valid captured output connected to the shared prompt and session identifiers. */
 export const outputFixture = (overrides: Partial<OutputRecord> = {}): OutputRecord => ({
   id: ids.output,
   promptId: ids.prompt,

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { LuffyflowError, toLuffyflowError } from "~/errors/luffyflow-error"
 import type { Logger } from "~/logging/logger"
@@ -45,8 +45,10 @@ export class BackgroundQueueCoordinator {
   private activeCommand: { tabId: number; commandId: string } | null = null
   private haltRequested = false
 
+  /** Receives all worker dependencies while assigning this service-worker instance a lease owner. */
   constructor(private readonly options: BackgroundQueueCoordinatorOptions) {}
 
+  /** Registers queue, prompt, platform, and lifecycle message handlers as one disposable group. */
   register(router: TypedMessageRouter): () => void {
     const cleanup = [
       router.register("queue/create", UI_SOURCES, async (message) => {
@@ -226,6 +228,7 @@ export class BackgroundQueueCoordinator {
     return () => cleanup.forEach((dispose) => dispose())
   }
 
+  /** Reconciles persisted queue state after an MV3 worker restart and resumes eligible work. */
   async recover(): Promise<QueueState | null> {
     const interrupted = await this.options.queues.getActive()
     if (
@@ -252,6 +255,7 @@ export class BackgroundQueueCoordinator {
     return queue
   }
 
+  /** Starts at most one processing loop and records unexpected terminal failures. */
   private schedule(): void {
     if (this.running !== null) return
     this.haltRequested = false
@@ -266,6 +270,7 @@ export class BackgroundQueueCoordinator {
     })
   }
 
+  /** Claims prompts, delegates page automation, captures outputs, and advances the queue. */
   private async run(signal: AbortSignal): Promise<void> {
     while (true) {
       if (signal.aborted) return
@@ -367,6 +372,7 @@ export class BackgroundQueueCoordinator {
     }
   }
 
+  /** Best-effort sends cancellation only to the tab and command currently being tracked. */
   private async cancelActive(reason: string): Promise<void> {
     const active = this.activeCommand
     if (active === null) return
@@ -378,6 +384,7 @@ export class BackgroundQueueCoordinator {
     })
   }
 
+  /** Requests loop shutdown, cancels page work, and waits for the worker to settle. */
   private async haltLoop(reason: string): Promise<void> {
     this.haltRequested = true
     this.loopController?.abort(new DOMException(reason, "AbortError"))
@@ -394,6 +401,7 @@ export class BackgroundQueueCoordinator {
     }
   }
 
+  /** Rejects dashboard commands based on a stale queue identity or revision. */
   private async assertExpectedQueue(queueId: string, expectedRevision: number): Promise<void> {
     const queue = await this.requireCurrentQueue(queueId)
     if (queue.revision !== expectedRevision) {
@@ -406,6 +414,7 @@ export class BackgroundQueueCoordinator {
     }
   }
 
+  /** Loads the active queue and verifies that it matches the requested identifier. */
   private async requireCurrentQueue(queueId: string): Promise<QueueState> {
     const queue = await this.options.queues.getActive()
     if (queue === null || queue.id !== queueId) {
@@ -418,16 +427,19 @@ export class BackgroundQueueCoordinator {
     return queue
   }
 
+  /** Enforces account ownership before exposing or mutating queue state. */
   private async assertQueueOwner(queueId: string, userId: string): Promise<void> {
     const queue = await this.requireCurrentQueue(queueId)
     if (queue.userId !== userId) throw ownershipError()
   }
 
+  /** Enforces account ownership before exposing or mutating a prompt. */
   private async assertPromptOwner(promptId: string, userId: string): Promise<void> {
     const prompt = await this.options.prompts.getById(promptId)
     if (prompt === null || prompt.userId !== userId) throw ownershipError()
   }
 
+  /** Confirms content-originated messages came from the expected supported tab and frame. */
   private async verifyContentSender(
     promptId: string,
     sender: chrome.runtime.MessageSender,
@@ -447,6 +459,7 @@ export class BackgroundQueueCoordinator {
     }
   }
 
+  /** Collects prior output fingerprints so adapters can ignore responses from earlier commands. */
   private async readSessionFingerprints(sessionId: string): Promise<string[]> {
     const fingerprints: string[] = []
     let cursor: string | undefined
@@ -462,6 +475,7 @@ export class BackgroundQueueCoordinator {
   }
 }
 
+/** Prevents a signed-in user from mutating queue data owned by another account. */
 const ownershipError = () =>
   new LuffyflowError({
     code: "RECORD_OWNERSHIP_INVALID",

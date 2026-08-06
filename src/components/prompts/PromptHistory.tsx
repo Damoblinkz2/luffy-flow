@@ -196,6 +196,7 @@ export const PromptHistory = () => {
           <option value="google-flow">Google Flow</option>
           <option value="gemini">Gemini</option>
           <option value="grok">Grok</option>
+          <option value="meta-ai">Meta AI</option>
         </SelectField>
         <SelectField
           id="history-status"
@@ -409,6 +410,7 @@ export const PromptHistory = () => {
   )
 }
 
+/** Prefers safe domain messages and hides raw implementation details from the history UI. */
 const messageFromError = (error: unknown): string =>
   error instanceof LuffyflowError
     ? error.userMessage
@@ -416,8 +418,10 @@ const messageFromError = (error: unknown): string =>
       ? error.message
       : "The prompt history action failed."
 
+/** Escapes a history value so commas, quotes, and line breaks remain within one CSV cell. */
 const csvCell = (value: string): string => `"${value.replaceAll('"', '""')}"`
 
+/** Creates a temporary local URL, starts the export, and immediately releases that URL. */
 const downloadHistoryFile = (
   filename: string,
   content: string,

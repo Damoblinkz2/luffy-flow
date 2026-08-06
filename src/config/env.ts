@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { DEFAULT_API_TIMEOUT_MS } from "~/constants"
 import { appEnvironmentSchema } from "~/schemas/api"

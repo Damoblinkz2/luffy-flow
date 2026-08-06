@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { isoDateTimeSchema, outputTypeSchema, supportedPlatformSchema } from "./common"
 import { outputMediaMetadataSchema } from "./output"

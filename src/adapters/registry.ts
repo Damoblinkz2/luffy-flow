@@ -7,6 +7,7 @@ import type { PlatformAdapter } from "./contracts"
 export class PlatformAdapterRegistry {
   private readonly adapters = new Map<SupportedPlatform, PlatformAdapter>()
 
+  /** Adds one platform implementation and returns an ownership-safe unregister callback. */
   register(adapter: PlatformAdapter): () => void {
     if (this.adapters.has(adapter.id)) {
       throw new LuffyflowError({
@@ -24,14 +25,17 @@ export class PlatformAdapterRegistry {
     }
   }
 
+  /** Looks up a platform explicitly when a queued command already names its adapter. */
   get(id: SupportedPlatform): PlatformAdapter | null {
     return this.adapters.get(id) ?? null
   }
 
+  /** Chooses the first registered adapter that accepts the current page URL. */
   detect(url: URL): PlatformAdapter | null {
     return [...this.adapters.values()].find((adapter) => adapter.isSupportedUrl(url)) ?? null
   }
 
+  /** Releases every adapter observer before clearing the registry. */
   dispose(): void {
     for (const adapter of this.adapters.values()) adapter.dispose()
     this.adapters.clear()

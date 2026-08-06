@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { DEMO_ACCOUNT, MOCK_PLAN_LIMITS } from "~/constants"
 import { subscriptionSchema, usageSchema, invoicePlaceholderSchema } from "~/schemas/billing"

@@ -32,12 +32,14 @@ export interface CreateQueueInput {
 export class QueueService {
   private readonly stateMachine = new QueueStateMachine()
 
+  /** Receives repositories and policy dependencies so queue behavior remains testable. */
   constructor(
     private readonly queues: QueueRepository,
     private readonly prompts: PromptRepository,
     private readonly clock: Clock = systemClock,
   ) {}
 
+  /** Persists an ordered set of draft prompts and initializes its idle queue state. */
   async create(input: CreateQueueInput): Promise<QueueState> {
     const current = await this.queues.getActive()
     if (current !== null && !TERMINAL_QUEUE_STATUSES.has(current.status)) {
@@ -81,6 +83,7 @@ export class QueueService {
     }
   }
 
+  /** Acquires queue ownership and transitions an editable queue into active processing. */
   async start(
     queueId: string,
     expectedRevision: number,
@@ -101,6 +104,7 @@ export class QueueService {
     )
   }
 
+  /** Appends validated drafts while preserving stable positions and ownership. */
   async addPrompts(
     queueId: string,
     expectedRevision: number,
@@ -147,12 +151,14 @@ export class QueueService {
     }
   }
 
+  /** Updates text only while its queue remains editable and the prompt is still a draft. */
   async editPrompt(promptId: string, text: string): Promise<PromptRecord> {
     const prompt = await this.requirePrompt(promptId)
     if (prompt.status !== "draft" && prompt.status !== "queued") throw promptLockedError()
     return this.prompts.update(prompt.id, prompt.revision, { text: promptTextSchema.parse(text) })
   }
 
+  /** Deletes a draft and compacts remaining positions under optimistic locking. */
   async removePrompt(
     queueId: string,
     expectedRevision: number,
@@ -172,6 +178,7 @@ export class QueueService {
     return saved
   }
 
+  /** Validates a complete permutation before rewriting prompt positions. */
   async reorderPrompts(
     queueId: string,
     expectedRevision: number,
@@ -197,6 +204,7 @@ export class QueueService {
     return saved
   }
 
+  /** Suspends future claims while safely interrupting any currently active prompt. */
   async pause(
     queueId: string,
     expectedRevision: number,
@@ -213,6 +221,7 @@ export class QueueService {
     return (await this.queues.getActive()) ?? paused
   }
 
+  /** Restores a paused queue only when the caller still owns the active lease. */
   async resume(
     queueId: string,
     expectedRevision: number,
@@ -233,6 +242,7 @@ export class QueueService {
     )
   }
 
+  /** Cancels unfinished prompts, releases the lease, and finalizes the queue. */
   async stop(queueId: string, expectedRevision: number, ownerId: string): Promise<QueueState> {
     const queue = await this.requireQueue(queueId, expectedRevision)
     if (
@@ -260,6 +270,7 @@ export class QueueService {
   }
 
   /** Worker recovery pauses unsafe in-flight work instead of risking duplicate submission. */
+  /** Repairs interrupted state after an MV3 service-worker restart without duplicating work. */
   async recoverAfterWorkerRestart(): Promise<QueueState | null> {
     const queue = await this.queues.getActive()
     if (queue === null || (queue.status !== "running" && queue.status !== "stopping")) return queue
@@ -295,6 +306,7 @@ export class QueueService {
     return this.queues.save(queueStateSchema.parse(recoveredCandidate), queue.revision)
   }
 
+  /** Atomically selects the next eligible prompt and marks it as the active submission. */
   async claimNext(
     queueId: string,
     ownerId: string,
@@ -341,11 +353,13 @@ export class QueueService {
     }
   }
 
+  /** Records that submission succeeded and output generation is now being observed. */
   async markWaiting(promptId: string): Promise<PromptRecord> {
     const prompt = await this.requirePrompt(promptId)
     return this.prompts.update(prompt.id, prompt.revision, { status: "waiting_for_output" })
   }
 
+  /** Links the captured output, completes the prompt, and advances queue progress. */
   async completePrompt(promptId: string, outputId: string): Promise<QueueState> {
     const prompt = await this.requirePrompt(promptId)
     await this.prompts.update(prompt.id, prompt.revision, {
@@ -358,6 +372,7 @@ export class QueueService {
     return this.finishCurrentPrompt(prompt.sessionId)
   }
 
+  /** Stores a safe failure code and applies retry policy without losing queue ownership. */
   async failPrompt(
     promptId: string,
     code: string,
@@ -386,6 +401,7 @@ export class QueueService {
     return saved
   }
 
+  /** Returns a failed prompt to pending only when its retry budget permits. */
   async retryPrompt(promptId: string, maximumRetryCount: number): Promise<PromptRecord> {
     const prompt = await this.requirePrompt(promptId)
     if (prompt.status !== "failed" || prompt.retryCount >= maximumRetryCount) {
@@ -405,6 +421,7 @@ export class QueueService {
     })
   }
 
+  /** Marks one unfinished prompt skipped so processing can continue intentionally. */
   async skipPrompt(promptId: string): Promise<PromptRecord> {
     const prompt = await this.requirePrompt(promptId)
     if (prompt.status !== "queued" && prompt.status !== "failed") {
@@ -417,6 +434,7 @@ export class QueueService {
     return this.prompts.update(prompt.id, prompt.revision, { status: "skipped" })
   }
 
+  /** Clears the active prompt and completes the queue when no unfinished work remains. */
   private async finishCurrentPrompt(sessionId: string): Promise<QueueState> {
     const queue = await this.requireQueueForSession(sessionId)
     const candidate: Record<string, unknown> = { ...queue }
@@ -444,6 +462,7 @@ export class QueueService {
     return saved
   }
 
+  /** Cancels every remaining prompt during an explicit queue stop. */
   private async cancelUnfinishedPrompts(queue: QueueState): Promise<void> {
     for (const promptId of queue.promptIds) {
       const prompt = await this.prompts.getById(promptId)
@@ -453,6 +472,7 @@ export class QueueService {
     }
   }
 
+  /** Converts an in-flight prompt into a recoverable failure before pausing or recovery. */
   private async interruptCurrentPrompt(queue: QueueState, code: string): Promise<QueueState> {
     if (queue.currentPromptId === undefined) return queue
     const prompt = await this.prompts.getById(queue.currentPromptId)
@@ -472,6 +492,7 @@ export class QueueService {
     return queueStateSchema.parse(candidate)
   }
 
+  /** Finds the first prompt matching a status set in persisted queue order. */
   private async findFirstPrompt(
     queue: QueueState,
     statuses: PromptStatus[],
@@ -483,6 +504,7 @@ export class QueueService {
     return null
   }
 
+  /** Confirms the queue is running under the expected unexpired owner lease. */
   private async requireRunningLease(
     queueId: string,
     ownerId: string,
@@ -506,6 +528,7 @@ export class QueueService {
     return queue
   }
 
+  /** Loads a queue and optionally enforces the caller's optimistic revision. */
   private async requireQueue(queueId: string, expectedRevision?: number): Promise<QueueState> {
     const queue = await this.queues.getActive()
     if (queue === null || queue.id !== queueId) {
@@ -526,6 +549,7 @@ export class QueueService {
     return queue
   }
 
+  /** Resolves an active queue by its worker session to reject stale callbacks. */
   private async requireQueueForSession(sessionId: string): Promise<QueueState> {
     const queue = await this.queues.getActive()
     if (queue === null || queue.sessionId !== sessionId) {
@@ -538,6 +562,7 @@ export class QueueService {
     return queue
   }
 
+  /** Ensures structural prompt edits occur only in idle or paused queues. */
   private async requireEditableQueue(
     queueId: string,
     expectedRevision: number,
@@ -557,6 +582,7 @@ export class QueueService {
     return queue
   }
 
+  /** Persists zero-based positions after removal or drag-and-drop reordering. */
   private async rewriteQueuePositions(promptIds: string[]): Promise<void> {
     for (const [position, promptId] of promptIds.entries()) {
       const prompt = await this.prompts.getById(promptId)
@@ -566,6 +592,7 @@ export class QueueService {
     }
   }
 
+  /** Loads a prompt or produces the shared not-found domain error. */
   private async requirePrompt(promptId: string): Promise<PromptRecord> {
     const prompt = await this.prompts.getById(promptId)
     if (prompt === null) {
@@ -579,6 +606,7 @@ export class QueueService {
   }
 }
 
+/** Converts one queue input into a validated draft prompt with stable ordering metadata. */
 const createPromptRecord = (
   input: CreateQueueInput,
   text: string,
@@ -602,6 +630,7 @@ const createPromptRecord = (
   syncStatus: "local_only",
 })
 
+/** Creates an expiring queue lease and advances its generation to invalidate old workers. */
 const createLease = (queue: QueueState, ownerId: string, now: Date) =>
   queueLeaseSchema.parse({
     ownerId,
@@ -610,6 +639,7 @@ const createLease = (queue: QueueState, ownerId: string, now: Date) =>
     expiresAt: new Date(now.getTime() + MAXIMUM_GENERATION_LEASE_MS + queue.delayMs).toISOString(),
   })
 
+/** Identifies statuses that must be recovered, cancelled, or resumed before a queue is complete. */
 const isUnfinished = (status: PromptStatus): boolean =>
   status === "draft" ||
   status === "queued" ||
@@ -617,6 +647,7 @@ const isUnfinished = (status: PromptStatus): boolean =>
   status === "waiting_for_output" ||
   status === "failed"
 
+/** Reports an optimistic-concurrency collision without silently overwriting another worker. */
 const promptLockedError = () =>
   new LuffyflowError({
     code: "PROMPT_EDIT_LOCKED",

@@ -28,6 +28,7 @@ export const delay = (durationMs: number, signal?: AbortSignal): Promise<void> =
     signal?.addEventListener("abort", handleAbort, { once: true })
   })
 
+/** Preserves a caller-supplied abort reason or creates the standard cancellation error. */
 const abortError = (signal: AbortSignal | undefined): Error =>
   signal?.reason instanceof Error
     ? signal.reason

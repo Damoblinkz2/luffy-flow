@@ -79,6 +79,7 @@ export const createAuthStore = (service: AuthService): StoreApi<AuthStoreState> 
     clearFeedback: () => set({ error: null, notice: null }),
   }))
 
+/** Reduces authentication failures to safe messages suitable for persistent store state. */
 const messageFromError = (error: unknown): string =>
   error instanceof LuffyflowError
     ? error.userMessage

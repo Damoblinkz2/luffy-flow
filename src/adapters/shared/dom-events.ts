@@ -37,6 +37,7 @@ export const clickVisibleControl = (element: HTMLElement): void => {
   element.click()
 }
 
+/** Produces one stable domain error for detached, hidden, or otherwise unusable inputs. */
 const inputUnavailableError = () =>
   new LuffyflowError({
     code: "PROMPT_INPUT_UNAVAILABLE",
@@ -45,6 +46,7 @@ const inputUnavailableError = () =>
     recoverable: true,
   })
 
+/** Prevents synthetic events from being dispatched to elements a user could not interact with. */
 const assertVisible = (element: HTMLElement): void => {
   if (!element.isConnected || element.getClientRects().length === 0) throw inputUnavailableError()
 }

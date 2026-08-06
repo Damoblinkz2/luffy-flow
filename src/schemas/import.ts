@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { entityIdSchema, isoDateTimeSchema } from "./common"
 import { promptTextSchema } from "./prompt"

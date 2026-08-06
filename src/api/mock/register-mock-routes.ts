@@ -1,4 +1,4 @@
-import { type z, ZodError } from "zod"
+import * as z from "zod/v3"
 
 import type { MockRequestContext } from "~/api/mock/MockTransport"
 import { type MockTransport } from "~/api/mock/MockTransport"
@@ -228,11 +228,12 @@ export const registerMockApiRoutes = (
   return () => unregister.forEach((cleanup) => cleanup())
 }
 
+/** Validates an untrusted request body and converts schema failures into API-shaped errors. */
 const parseBody = <T>(schema: z.ZodType<T>, body: unknown): T => {
   try {
     return schema.parse(body)
   } catch (error) {
-    if (error instanceof ZodError) {
+    if (error instanceof z.ZodError) {
       throw new LuffyflowError({
         code: "VALIDATION_FAILED",
         category: "invalid_data",
@@ -244,6 +245,7 @@ const parseBody = <T>(schema: z.ZodType<T>, body: unknown): T => {
   }
 }
 
+/** Rotates any prior session and issues short-lived access plus refresh credentials. */
 const issueTokens = async (
   userId: string,
   now: Date,
@@ -264,6 +266,7 @@ const issueTokens = async (
   }
 }
 
+/** Resolves a bearer token to a live mock session before protected handlers run. */
 const authenticate = async (
   context: MockRequestContext,
   repository: MockApiStateRepository,
@@ -278,6 +281,7 @@ const authenticate = async (
   return { state, account: requireAccount(state, session.userId) }
 }
 
+/** Extracts a case-insensitive Bearer header without accepting alternate auth schemes. */
 const readBearerToken = (context: MockRequestContext): string => {
   const authorization = Object.entries(context.headers).find(
     ([key]) => key.toLowerCase() === "authorization",
@@ -288,6 +292,7 @@ const readBearerToken = (context: MockRequestContext): string => {
   return authorization.slice("Bearer ".length)
 }
 
+/** Requires a caller-provided key so retrying a mutation cannot apply it twice. */
 const readIdempotencyKey = (context: MockRequestContext): string => {
   const key = Object.entries(context.headers).find(
     ([header]) => header.toLowerCase() === "idempotency-key",
@@ -302,6 +307,7 @@ const readIdempotencyKey = (context: MockRequestContext): string => {
   return key
 }
 
+/** Returns the authenticated mock account or fails as an invalid session. */
 const requireAccount = (state: MockApiState, userId: string): MockAccount => {
   const account = state.accounts.find((candidate) => candidate.user.id === userId)
   if (account === undefined)
@@ -309,6 +315,7 @@ const requireAccount = (state: MockApiState, userId: string): MockAccount => {
   return account
 }
 
+/** Enforces the invariant that every mock account owns one subscription record. */
 const requireSubscription = (state: MockApiState, userId: string) => {
   const subscription = state.subscriptions.find((candidate) => candidate.userId === userId)
   if (subscription === undefined) {
@@ -321,6 +328,7 @@ const requireSubscription = (state: MockApiState, userId: string) => {
   return subscription
 }
 
+/** Enforces the invariant that every mock account owns one usage record. */
 const requireUsage = (state: MockApiState, userId: string) => {
   const usage = state.usage.find((candidate) => candidate.userId === userId)
   if (usage === undefined) {
@@ -333,26 +341,32 @@ const requireUsage = (state: MockApiState, userId: string) => {
   return usage
 }
 
+/** Creates a non-retryable authentication error with the shared application shape. */
 const unauthorized = (code: string, userMessage: string): LuffyflowError =>
   new LuffyflowError({ code, category: "authentication", userMessage, recoverable: false })
 
+/** Creates a non-retryable state-conflict error for invalid mock mutations. */
 const conflict = (code: string, userMessage: string): LuffyflowError =>
   new LuffyflowError({ code, category: "invalid_data", userMessage, recoverable: false })
 
+/** Removes expired refresh sessions before token lookup or persistence. */
 const pruneExpiredSessions = (sessions: MockSession[], now: Date): MockSession[] =>
   sessions.filter((session) => Date.parse(session.refreshExpiresAt) > now.getTime())
 
+/** Advances billing dates in UTC to avoid local daylight-saving changes. */
 const addUtcMonths = (date: Date, months: number): Date => {
   const result = new Date(date)
   result.setUTCMonth(result.getUTCMonth() + months)
   return result
 }
 
+/** Parses and bounds page size so mock list endpoints behave like a real API. */
 const readLimit = (value: string | null): number => {
   const parsed = Number(value ?? 25)
   return Number.isInteger(parsed) ? Math.min(100, Math.max(1, parsed)) : 25
 }
 
+/** Parses a non-negative list offset, falling back safely for malformed input. */
 const readOffset = (value: string | null): number => {
   const parsed = Number(value ?? 0)
   return Number.isInteger(parsed) ? Math.max(0, parsed) : 0

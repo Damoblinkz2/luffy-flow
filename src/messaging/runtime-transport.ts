@@ -11,6 +11,7 @@ export interface MessageTransport {
 
 /** Runtime transport sends messages to the background worker or another extension page. */
 export class RuntimeMessageTransport implements MessageTransport {
+  /** Wraps runtime.sendMessage and promotes Chrome's side-channel error into rejection. */
   send(message: ExtensionMessage): Promise<unknown> {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(message, (response: unknown) => {
@@ -27,8 +28,10 @@ export class RuntimeMessageTransport implements MessageTransport {
 
 /** Tab transport addresses the content script in one verified active tab. */
 export class TabMessageTransport implements MessageTransport {
+  /** Pins all messages from this transport to one previously verified browser tab. */
   constructor(private readonly tabId: number) {}
 
+  /** Wraps tabs.sendMessage and promotes Chrome's side-channel error into rejection. */
   send(message: ExtensionMessage): Promise<unknown> {
     return new Promise((resolve, reject) => {
       chrome.tabs.sendMessage(this.tabId, message, (response: unknown) => {

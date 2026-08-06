@@ -23,6 +23,7 @@ export interface PromptImportFile {
 
 /** Local prompt imports treat file extensions as authoritative and never upload file content. */
 export class PromptImportService {
+  /** Validates file metadata, parses its declared format, and returns drafts plus row issues. */
   async importFile(
     file: PromptImportFile,
     options: PromptImportOptions,
@@ -69,6 +70,7 @@ export class PromptImportService {
     )
   }
 
+  /** Accepts either a JSON string array or records containing a prompt/text field. */
   private fromJson(
     text: string,
     source: ImportSource,
@@ -88,6 +90,7 @@ export class PromptImportService {
     }
   }
 
+  /** Normalizes parsed rows, enforces limits, and preserves non-fatal validation issues. */
   private fromRows(
     rows: ParsedRow[],
     source: ImportSource,
@@ -138,11 +141,13 @@ interface ParsedRow {
   text: string
 }
 
+/** Infers only explicitly supported upload formats and leaves unknown files rejected. */
 const formatFromFilename = (filename: string): Exclude<PromptImportFormat, "text"> | null => {
   const extension = /\.([^.]+)$/.exec(filename.trim().toLowerCase())?.[1]
   return extension === "txt" || extension === "csv" || extension === "json" ? extension : null
 }
 
+/** Treats each non-empty TXT line as one prompt while retaining original line numbers. */
 const parseTxt = (text: string): ParsedRow[] =>
   stripBom(text)
     .split(/\r?\n/)
@@ -168,11 +173,14 @@ const parseCsv = (text: string, requestedColumn: string | undefined): ParsedRow[
   }))
 }
 
+/** Removes an optional UTF-8 byte-order marker before header or prompt parsing. */
 const stripBom = (text: string): string => text.replace(/^\uFEFF/, "")
 
+/** Produces a validated import result for failures that occur before row parsing. */
 const issueOnly = (code: PromptImportIssue["code"], message: string): PromptImportResult =>
   promptImportResultSchema.parse({ drafts: [], issues: [{ code, message }], rejectedCount: 0 })
 
+/** Stops potentially large file parsing promptly when the import UI is cancelled. */
 const throwIfAborted = (signal: AbortSignal | undefined): void => {
   if (signal?.aborted === true) throw signal.reason
 }

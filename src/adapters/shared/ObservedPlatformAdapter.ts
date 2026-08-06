@@ -37,6 +37,7 @@ class AdapterFault extends Error {
   readonly retryAfterMs?: number
   readonly selectorKey?: string
 
+  /** Stores a machine-readable fault while retaining safe diagnostics for health reporting. */
   constructor(options: AdapterFaultOptions) {
     super(options.message)
     this.name = "AdapterFault"
@@ -60,10 +61,13 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
   private submissionRouteKey: string | null = null
   private statusTextCache: { checkedAt: number; value: string } | null = null
 
+  /** Lets each platform define the exact safe routes where its DOM assumptions apply. */
   abstract isSupportedUrl(url: URL): boolean
 
+  /** Lets each platform translate one response node into the shared output contract. */
   protected abstract detectOutput(element: HTMLElement): DetectedOutput | null
 
+  /** Inspects authentication, throttling, generation, and input signals without changing the page. */
   detectPageState(signal: AbortSignal): Promise<AdapterResult<PageState>> {
     return this.run(
       signal,
@@ -84,6 +88,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Waits for the first visible prompt editor and reports selector diagnostics on failure. */
   findPromptInput(signal: AbortSignal): Promise<AdapterResult<HTMLElement>> {
     return this.run(
       signal,
@@ -104,6 +109,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Updates the host editor through browser events so its framework notices the change. */
   setPromptText(
     input: HTMLElement,
     prompt: string,
@@ -128,6 +134,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Clicks an enabled submit control only after confirming route and blocking states. */
   submitPrompt(signal: AbortSignal): Promise<AdapterResult<void>> {
     return this.run(
       signal,
@@ -161,6 +168,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Observes busy and output signals until the platform proves generation has begun. */
   waitForGenerationStart(
     context: SubmitPromptContext,
     signal: AbortSignal,
@@ -185,6 +193,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Waits for busy indicators to settle and a stable, previously unseen output to appear. */
   waitForGenerationComplete(
     context: SubmitPromptContext,
     signal: AbortSignal,
@@ -217,6 +226,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Reads the newest currently detectable output without initiating generation. */
   extractLatestOutput(
     context: SubmitPromptContext,
     signal: AbortSignal,
@@ -242,6 +252,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Uses the host's stop control when available and reports unsupported cancellation safely. */
   cancelGeneration(signal: AbortSignal): Promise<AdapterResult<void>> {
     return this.run(
       signal,
@@ -262,6 +273,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Returns selector presence and confidence diagnostics without including page content. */
   getHealth(signal: AbortSignal): Promise<AdapterHealth> {
     const linked = linkSignals(signal, this.lifecycleController.signal)
     try {
@@ -297,6 +309,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     }
   }
 
+  /** Disconnects lifecycle observation and invalidates subsequent work on this instance. */
   dispose(): void {
     this.lifecycleController.abort(
       new DOMException("The platform adapter was disposed.", "AbortError"),
@@ -306,6 +319,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     this.statusTextCache = null
   }
 
+  /** Reduces visible page signals to one readiness state ordered by operational priority. */
   private readiness(url: URL, generationInProgress: boolean): PageReadiness {
     if (!this.isSupportedUrl(url)) return "unsupported"
     if (this.hasStatus(this.selectors.rateLimitIndicator, this.textSignals.rateLimited)) {
@@ -332,6 +346,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     return this.hasVisible(this.selectors.promptInput) ? "ready" : "loading"
   }
 
+  /** Extracts normalized outputs from candidate containers and drops false-positive nodes. */
   private outputMatches(): OutputMatch[] {
     const matches = queryAll<HTMLElement>(document, this.selectors.outputContainer)
       .filter(({ element }) => isVisible(element))
@@ -343,10 +358,12 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     })
   }
 
+  /** Returns the newest matching response according to document order. */
   private latestOutput(): OutputMatch | null {
     return this.outputMatches().at(-1) ?? null
   }
 
+  /** Excludes sources captured before submission to avoid returning an older response. */
   private latestNewOutput(): OutputMatch | null {
     const outputs = this.outputMatches()
     return (
@@ -356,10 +373,12 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
+  /** Tests whether any selector candidate resolves to a currently visible element. */
   private hasVisible(candidates: AdapterSelectorConfig[keyof AdapterSelectorConfig]): boolean {
     return queryAll<HTMLElement>(document, candidates).some(({ element }) => isVisible(element))
   }
 
+  /** Matches normalized visible status text against platform-specific phrases. */
   private hasStatus(
     candidates: AdapterSelectorConfig[keyof AdapterSelectorConfig],
     phrases: readonly string[],
@@ -369,6 +388,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     return phrases.some((phrase) => pageText.includes(phrase.toLocaleLowerCase()))
   }
 
+  /** Collects bounded status-region text used only for readiness classification. */
   private pageStatusText(): string {
     const now = Date.now()
     if (this.statusTextCache !== null && now - this.statusTextCache.checkedAt < 750) {
@@ -379,6 +399,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     return value
   }
 
+  /** Converts host authentication and throttling signals into actionable adapter faults. */
   private assertNoBlockingStatus(): void {
     if (this.hasStatus(this.selectors.rateLimitIndicator, this.textSignals.rateLimited)) {
       throw new AdapterFault({
@@ -400,6 +421,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     }
   }
 
+  /** Stops work if SPA navigation moved outside the adapter's allowed routes. */
   private assertSupportedRoute(): URL {
     const url = this.currentUrl()
     if (!this.isSupportedUrl(url)) {
@@ -411,6 +433,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     return url
   }
 
+  /** Ensures a multi-step submission remains on the exact route where it started. */
   private assertSubmissionRoute(): void {
     const url = this.assertSupportedRoute()
     if (this.submissionRouteKey !== null && routeKey(url) !== this.submissionRouteKey) {
@@ -421,10 +444,12 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     }
   }
 
+  /** Reads the live document URL rather than relying on a stale cached value. */
   private currentUrl(): URL {
     return new URL(globalThis.location.href)
   }
 
+  /** Summarizes provisional and fallback selector use for troubleshooting. */
   private selectorWarnings(): string[] {
     const candidates = selectorEntries(this.selectors).flatMap(([, group]) => group)
     const warnings = [
@@ -438,6 +463,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     return warnings
   }
 
+  /** Provides one result/error boundary for every operation and records health failures. */
   private async run<T>(
     signal: AbortSignal,
     timeoutCode: AdapterErrorCode,
@@ -456,6 +482,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     }
   }
 
+  /** Sanitizes unknown DOM exceptions into the adapter's stable public failure shape. */
   private failure<T>(
     error: unknown,
     timeoutCode: AdapterErrorCode,
@@ -494,21 +521,26 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
   }
 }
 
+/** Tracks SPA route changes without treating harmless query-string updates as navigation. */
 const routeKey = (url: URL): string => `${url.hostname}${url.pathname}${url.hash}`
 
+/** Iterates selector groups without losing their precise configuration key types. */
 const selectorEntries = (config: AdapterSelectorConfig) =>
   (Object.keys(config) as (keyof AdapterSelectorConfig)[]).map((key) => [key, config[key]] as const)
 
+/** Applies the minimum visibility checks required before reading or interacting with a node. */
 const isVisible = (element: HTMLElement): boolean =>
   element.isConnected &&
   element.getClientRects().length > 0 &&
   element.getAttribute("aria-hidden") !== "true"
 
+/** Extends visibility checks with native and ARIA disabled-state handling. */
 const isVisibleAndEnabled = (element: HTMLElement): boolean =>
   isVisible(element) &&
   !(element instanceof HTMLButtonElement && element.disabled) &&
   element.getAttribute("aria-disabled") !== "true"
 
+/** Stops multi-step platform operations promptly and preserves the caller's abort reason. */
 const throwIfAborted = (signal: AbortSignal): void => {
   if (signal.aborted) {
     throw signal.reason ?? new DOMException("The platform operation was cancelled.", "AbortError")

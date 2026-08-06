@@ -13,7 +13,7 @@ export interface ApplicationProvidersProps {
   services?: ApplicationServices
 }
 
-/** Every extension document owns one service graph and disposes listeners/database handles on close. */
+/** Every extension document owns one service graph and disposes listeners/database handles on close.*/
 export const ApplicationProviders = ({
   children,
   services: supplied,

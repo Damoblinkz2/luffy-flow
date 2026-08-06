@@ -92,6 +92,7 @@ export const createBackgroundRuntime = (): BackgroundRuntime => {
   }
 }
 
+/** Resolves the foreground tab and fails early when no injectable browser tab exists. */
 const activeTabId = async (): Promise<number> => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (tab?.id === undefined) {

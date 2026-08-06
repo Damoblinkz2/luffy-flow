@@ -4,6 +4,7 @@ import type { PlatformAdapter } from "~/adapters/contracts"
 import { GeminiAdapter } from "~/adapters/gemini/GeminiAdapter"
 import { GoogleFlowAdapter } from "~/adapters/google-flow/GoogleFlowAdapter"
 import { GrokAdapter } from "~/adapters/grok/GrokAdapter"
+import { MetaAiAdapter } from "~/adapters/meta-ai/MetaAiAdapter"
 import { PlatformAdapterRegistry } from "~/adapters/registry"
 import { queryAll, queryFirst } from "~/adapters/shared/dom-query"
 import { detectMediaOutput, detectTextOutput } from "~/adapters/shared/output-extraction"
@@ -13,6 +14,7 @@ describe("supported platform URLs", () => {
     [new GoogleFlowAdapter(), "https://flow.google/", "https://flow.google.evil.example/"],
     [new GeminiAdapter(), "https://gemini.google.com/app/abc", "http://gemini.google.com/app"],
     [new GrokAdapter(), "https://x.com/i/grok", "https://x.com/home"],
+    [new MetaAiAdapter(), "https://meta.ai/", "https://meta.ai.evil.example/"],
   ])("allows only explicit official routes", (adapter, allowed, denied) => {
     expect(adapter.isSupportedUrl(new URL(allowed))).toBe(true)
     expect(adapter.isSupportedUrl(new URL(denied))).toBe(false)

@@ -40,12 +40,14 @@ export interface GeneratedOutputName {
 
 /** Naming allocates durable sequence numbers and resolves duplicate filenames deterministically. */
 export class OutputNamingService {
+  /** Receives sequence and collision dependencies so filename generation remains deterministic. */
   constructor(
     private readonly sequences: SequenceRepository,
     private readonly outputs: OutputRepository,
     private readonly clock: Clock = systemClock,
   ) {}
 
+  /** Expands a naming template with prompt metadata and an atomically allocated sequence. */
   async generate(
     prompt: PromptRecord,
     detected: DetectedOutput,
@@ -84,6 +86,7 @@ export class OutputNamingService {
     }
   }
 
+  /** Sanitizes a requested base name while preserving the output's original extension. */
   async rename(currentFilename: string, requestedName: string, outputId: string): Promise<string> {
     const extensionMatch = /\.[a-z0-9]{1,16}$/i.exec(currentFilename)
     const normalized = normalizeRenamedFilename(requestedName, extensionMatch?.[0] ?? ".bin")
@@ -97,6 +100,7 @@ export class OutputNamingService {
     return normalized
   }
 
+  /** Adds a numeric suffix until the filename is unique within the output repository. */
   private async resolveDuplicate(filename: string): Promise<string> {
     if (!(await this.outputs.isFilenameTaken(filename))) return filename
     const extension = /\.[a-z0-9]{1,16}$/i.exec(filename)?.[0] ?? ".bin"
@@ -118,6 +122,7 @@ export class OutputNamingService {
   }
 }
 
+/** Builds the ownership-aware counter key used for global, queue, or daily sequences. */
 const createScopeKey = (prompt: PromptRecord, scope: SequenceScope, now: Date): string => {
   const prefix = `user:${prompt.userId}`
   if (scope === "platform") return `${prefix}:platform:${prompt.platform}`
@@ -126,6 +131,7 @@ const createScopeKey = (prompt: PromptRecord, scope: SequenceScope, now: Date): 
   return `${prefix}:global`
 }
 
+/** Rejects unknown template tokens before they can produce misleading filenames. */
 const validatePattern = (pattern: string): void => {
   const tokens = [...pattern.matchAll(/\{([^{}]+)\}/g)].map((match) => match[1])
   const unsupported = tokens.find(

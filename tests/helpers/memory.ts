@@ -15,6 +15,7 @@ import type {
   PromptRepository,
 } from "~/storage/repositories/contracts"
 
+/** Minimal clone-on-write key/value storage isolates service tests from browser APIs. */
 export class MemoryKeyValueStore implements KeyValueStore {
   readonly values = new Map<string, unknown>()
 
@@ -33,6 +34,7 @@ export class MemoryKeyValueStore implements KeyValueStore {
   }
 }
 
+/** Schema-validating prompt repository provides deterministic test-only persistence. */
 export class MemoryPromptRepository implements PromptRepository {
   readonly records = new Map<string, PromptRecord>()
 
@@ -89,6 +91,7 @@ export class MemoryPromptRepository implements PromptRepository {
   }
 }
 
+/** Schema-validating output repository models deduplication and optimistic revisions in memory. */
 export class MemoryOutputRepository implements OutputRepository {
   readonly records = new Map<string, OutputRecord>()
 
@@ -158,6 +161,7 @@ export class MemoryOutputRepository implements OutputRepository {
   }
 }
 
+/** Applies the small first-page pagination behavior needed by unit-test repositories. */
 const pageResult = <T>(items: T[], page: PageRequest): PageResult<T> => ({
   items: items.slice(0, page.limit),
   total: items.length,

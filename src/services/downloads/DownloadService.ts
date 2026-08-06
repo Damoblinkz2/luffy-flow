@@ -22,10 +22,12 @@ export class DownloadService {
       void this.finish(delta.id, false).catch(() => undefined)
   }
 
+  /** Attaches one Chrome download-state listener for all requests owned by this service. */
   constructor(private readonly options: DownloadServiceOptions) {
     chrome.downloads.onChanged.addListener(this.onChanged)
   }
 
+  /** Registers the background download command and returns its route cleanup callback. */
   register(router: TypedMessageRouter): () => void {
     return router.register("download/request", DOWNLOAD_SOURCES, async (message) =>
       this.request(
@@ -36,6 +38,7 @@ export class DownloadService {
     )
   }
 
+  /** Validates ownership and dispatches text, archive, or remote-media download handling. */
   async request(
     outputIds: string[],
     requestedFormat?: TextExportFormat | "native",
@@ -86,11 +89,13 @@ export class DownloadService {
     }
   }
 
+  /** Removes the Chrome listener and forgets in-memory download-to-output tracking. */
   dispose(): void {
     chrome.downloads.onChanged.removeListener(this.onChanged)
     this.tracked.clear()
   }
 
+  /** Renders one text output into a local data URL and starts its browser download. */
   private async downloadText(output: OutputRecord, format: TextExportFormat): Promise<number> {
     const content = renderText(output, format)
     return startBrowserDownload({
@@ -100,6 +105,7 @@ export class DownloadService {
     })
   }
 
+  /** Packages multiple text representations in a ZIP before starting one download. */
   private async downloadTextArchive(
     outputs: OutputRecord[],
     format: TextExportFormat,
@@ -117,6 +123,7 @@ export class DownloadService {
     })
   }
 
+  /** Starts a direct media download only when the captured source URL is still available. */
   private downloadRemote(output: OutputRecord): Promise<number> {
     if (output.sourceUrl === undefined) throw unavailableMediaError()
     let url: URL
@@ -133,6 +140,7 @@ export class DownloadService {
     })
   }
 
+  /** Updates all outputs associated with a terminal Chrome download event. */
   private async finish(downloadId: number, succeeded: boolean): Promise<void> {
     const outputIds = this.tracked.get(downloadId)
     if (outputIds === undefined) return
@@ -159,6 +167,7 @@ export class DownloadService {
     )
   }
 
+  /** Best-effort marks a download failure without throwing from an event listener. */
   private async markFailed(id: string): Promise<void> {
     const output = await this.options.outputs.getById(id)
     if (output === null) return
@@ -173,6 +182,7 @@ export class DownloadService {
   }
 }
 
+/** Wraps Chrome's callback API and includes runtime.lastError in the rejected promise. */
 const startBrowserDownload = (options: chrome.downloads.DownloadOptions): Promise<number> =>
   new Promise((resolve, reject) => {
     chrome.downloads.download(options, (downloadId) => {
@@ -193,6 +203,7 @@ const startBrowserDownload = (options: chrome.downloads.DownloadOptions): Promis
     })
   })
 
+/** Serializes a captured text output into the user-selected portable format. */
 const renderText = (output: OutputRecord, format: TextExportFormat): string => {
   const text = output.textContent ?? ""
   if (format === "json") {
@@ -213,14 +224,17 @@ const renderText = (output: OutputRecord, format: TextExportFormat): string => {
   return `${text}\n`
 }
 
+/** Replaces any existing extension so the downloaded name matches the chosen format. */
 const filenameForText = (output: OutputRecord, format: TextExportFormat): string => {
   const current = output.userDefinedName ?? output.generatedFilename
   return buildSafeFilename(current.replace(/\.[a-z0-9]{1,16}$/i, ""), `.${format}`)
 }
 
+/** Encodes generated text locally, avoiding any server upload during export. */
 const dataUrl = (mimeType: string, content: string): string =>
   `data:${mimeType};charset=utf-8,${encodeURIComponent(content)}`
 
+/** Supplies the MIME type Chrome uses for each supported text export. */
 const mimeForFormat = (format: TextExportFormat): string => {
   if (format === "json") return "application/json"
   if (format === "csv") return "text/csv"
@@ -228,8 +242,10 @@ const mimeForFormat = (format: TextExportFormat): string => {
   return "text/plain"
 }
 
+/** Escapes one RFC-style CSV field, including embedded quotation marks and newlines. */
 const csvCell = (value: string): string => `"${value.replaceAll('"', '""')}"`
 
+/** Explains that host-protected or expired media URLs cannot be downloaded later. */
 const unavailableMediaError = () =>
   new LuffyflowError({
     code: "DOWNLOAD_URL_UNAVAILABLE",

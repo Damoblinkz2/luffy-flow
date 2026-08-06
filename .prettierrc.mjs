@@ -5,7 +5,7 @@
 export default {
   arrowParens: "always",
   bracketSpacing: true,
-  endOfLine: "lf",
+  endOfLine: "auto",
   printWidth: 100,
   proseWrap: "preserve",
   semi: false,

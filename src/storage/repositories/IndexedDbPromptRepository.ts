@@ -108,6 +108,7 @@ export class IndexedDbPromptRepository implements PromptRepository {
   }
 }
 
+/** Applies ownership, status, source, and case-insensitive search filters in memory. */
 const matchesPrompt = (record: PromptRecord, filters: PromptFilters): boolean => {
   const search = filters.search?.toLocaleLowerCase()
   return (
@@ -120,6 +121,7 @@ const matchesPrompt = (record: PromptRecord, filters: PromptFilters): boolean =>
   )
 }
 
+/** Sorts a disposable result array according to the caller's requested direction. */
 const sortPrompts = (records: PromptRecord[], filters: PromptFilters): PromptRecord[] =>
   records.sort((left, right) => {
     if (filters.sort === "created_asc") return left.createdAt.localeCompare(right.createdAt)
@@ -127,9 +129,11 @@ const sortPrompts = (records: PromptRecord[], filters: PromptFilters): PromptRec
     return right.createdAt.localeCompare(left.createdAt)
   })
 
+/** Recognizes IndexedDB uniqueness failures so they can become domain conflicts. */
 const isConstraintError = (error: unknown): boolean =>
   error instanceof DOMException && error.name === "ConstraintError"
 
+/** Omits nullable optional fields so IndexedDB indexes remain sparse and queryable. */
 const removeNullPromptProperties = (record: Record<string, unknown>): void => {
   if (record.submittedAt === null) delete record.submittedAt
   if (record.completedAt === null) delete record.completedAt

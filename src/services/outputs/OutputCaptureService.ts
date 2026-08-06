@@ -27,6 +27,7 @@ export type OutputNamingSettings = Pick<
 export class OutputCaptureService {
   private operation: Promise<void> = Promise.resolve()
 
+  /** Receives naming and repository dependencies used by the serialized capture pipeline. */
   constructor(
     private readonly prompts: PromptRepository,
     private readonly outputs: OutputRepository,
@@ -37,6 +38,7 @@ export class OutputCaptureService {
     private readonly clock: Clock = systemClock,
   ) {}
 
+  /** Deduplicates a detected response, generates its filename, and persists it atomically. */
   capture(promptId: string, detected: DetectedOutput): Promise<OutputRecord> {
     return this.runExclusive(async () => {
       const prompt = await this.prompts.getById(promptId)
@@ -91,6 +93,7 @@ export class OutputCaptureService {
     })
   }
 
+  /** Applies naming validation and updates the persisted output under optimistic locking. */
   async rename(
     outputId: string,
     expectedRevision: number,
@@ -115,6 +118,7 @@ export class OutputCaptureService {
     })
   }
 
+  /** Serializes capture operations so concurrent detections cannot allocate duplicate names. */
   private runExclusive<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
     const result = this.operation.then(operation, operation)
     this.operation = result.then(
@@ -125,5 +129,6 @@ export class OutputCaptureService {
   }
 }
 
+/** Derives a persisted extension from the generated name, using .bin when unknown. */
 const extensionFromFilename = (filename: string): string =>
   /\.[a-z0-9]{1,16}$/i.exec(filename)?.[0].toLowerCase() ?? ".bin"

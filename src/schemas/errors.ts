@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 /** Stable categories let UI surfaces choose recovery actions without parsing messages. */
 export const errorCategorySchema = z.enum([

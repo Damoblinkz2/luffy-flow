@@ -14,11 +14,13 @@ export class GrokAdapter extends ObservedPlatformAdapter {
   protected override readonly selectors: AdapterSelectorConfig
   protected override readonly textSignals = grokTextSignals
 
+  /** Applies user-supplied selector corrections without mutating the shipped defaults. */
   constructor(overrides: PlatformAdapterSettings["selectorOverrides"] = {}) {
     super()
     this.selectors = applySelectorOverrides(grokSelectors, overrides)
   }
 
+  /** Accepts standalone Grok plus X's dedicated Grok application route. */
   override isSupportedUrl(url: URL): boolean {
     if (url.protocol !== "https:") return false
     if (url.hostname === "grok.com" || url.hostname === "www.grok.com") return true
@@ -28,6 +30,7 @@ export class GrokAdapter extends ObservedPlatformAdapter {
     )
   }
 
+  /** Converts the latest Grok response container into a normalized text output. */
   protected override detectOutput(element: HTMLElement): DetectedOutput | null {
     return detectTextOutput(element)
   }

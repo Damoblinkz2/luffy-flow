@@ -21,6 +21,7 @@ export class AuthService implements AuthTokenProvider {
   private refreshOperation: Promise<AuthSession> | null = null
   private readonly clock: Clock
 
+  /** Receives API, storage, logging, and clock dependencies for deterministic session handling. */
   constructor(
     private readonly api: AuthApi,
     private readonly sessionStorage: VersionedNamespace<AuthSession>,
@@ -30,10 +31,12 @@ export class AuthService implements AuthTokenProvider {
     this.clock = clock
   }
 
+  /** Creates an account and persists the returned authenticated session. */
   async signup(request: SignupRequest): Promise<AuthSession> {
     return this.persistResponse(await this.api.signup(request))
   }
 
+  /** Authenticates credentials and replaces any locally cached session. */
   async login(request: LoginRequest): Promise<AuthSession> {
     return this.persistResponse(await this.api.login(request))
   }
@@ -51,6 +54,7 @@ export class AuthService implements AuthTokenProvider {
     }
   }
 
+  /** Requests password recovery without revealing whether the address exists. */
   forgotPassword(email: string): Promise<{ accepted: true }> {
     return this.api.forgotPassword({ email })
   }
@@ -85,22 +89,26 @@ export class AuthService implements AuthTokenProvider {
     }
   }
 
+  /** Returns a usable access token, refreshing shortly before expiration when needed. */
   async getAccessToken(): Promise<string | null> {
     const session = await this.ensureHydrated()
     if (session === null) return null
     return (this.isExpiring(session) ? await this.refreshSession() : session).tokens.accessToken
   }
 
+  /** Forces token refresh for API retry logic while coalescing concurrent callers. */
   async refreshAccessToken(): Promise<string | null> {
     const session = await this.ensureHydrated()
     if (session === null) return null
     return (await this.refreshSession()).tokens.accessToken
   }
 
+  /** Exposes the already-hydrated in-memory session without performing storage I/O. */
   getCurrentSession(): AuthSession | null {
     return this.session
   }
 
+  /** Loads session storage once per service lifetime and caches the parsed result. */
   private async ensureHydrated(): Promise<AuthSession | null> {
     if (!this.hydrated) {
       this.session = await this.sessionStorage.get()
@@ -109,6 +117,7 @@ export class AuthService implements AuthTokenProvider {
     return this.session
   }
 
+  /** Shares one refresh promise and clears invalid credentials when refresh fails. */
   private refreshSession(): Promise<AuthSession> {
     if (this.refreshOperation !== null) return this.refreshOperation
 
@@ -136,6 +145,7 @@ export class AuthService implements AuthTokenProvider {
     return this.refreshOperation
   }
 
+  /** Validates API credentials before updating memory and versioned storage together. */
   private async persistResponse(response: {
     user: AuthSession["user"]
     tokens: AuthSession["tokens"]
@@ -147,6 +157,7 @@ export class AuthService implements AuthTokenProvider {
     return persistedSession
   }
 
+  /** Treats tokens inside the skew window as expired to avoid mid-request failures. */
   private isExpiring(session: AuthSession): boolean {
     return (
       Date.parse(session.tokens.expiresAt) <= this.clock.now().getTime() + TOKEN_REFRESH_SKEW_MS

@@ -65,6 +65,7 @@ export const detectTextOutput = (root: HTMLElement): DetectedOutput | null => {
   }
 }
 
+/** Includes the root itself when locating the first output element matching a selector. */
 const firstSelfOrDescendant = (
   root: HTMLElement,
   selector: string,
@@ -75,6 +76,7 @@ const firstSelfOrDescendant = (
   return root.querySelector<HTMLMediaElement | HTMLImageElement | HTMLAnchorElement>(selector)
 }
 
+/** Reads the browser-resolved URL from supported media elements, rejecting empty sources. */
 const mediaSource = (element: Element): string | undefined => {
   const raw =
     element instanceof HTMLImageElement
@@ -87,6 +89,7 @@ const mediaSource = (element: Element): string | undefined => {
   return safeHttpUrl(raw)
 }
 
+/** Maps a DOM media element to the output category persisted by the extension. */
 const mediaType = (element: Element): OutputType => {
   if (element instanceof HTMLImageElement) return "image"
   if (element instanceof HTMLVideoElement) return "video"
@@ -94,6 +97,7 @@ const mediaType = (element: Element): OutputType => {
   return "file"
 }
 
+/** Reuses a host-provided message identifier so repeated scans can deduplicate outputs. */
 const outputId = (element: HTMLElement): string | undefined => {
   const owning = element.closest<HTMLElement>("[data-message-id], [data-output-id], [data-id]")
   const value =
@@ -101,6 +105,7 @@ const outputId = (element: HTMLElement): string | undefined => {
   return value === undefined || value.length === 0 ? undefined : value.slice(0, 512)
 }
 
+/** Accepts only downloadable HTTP(S) URLs and discards malformed or unsafe schemes. */
 const safeHttpUrl = (value: string): string | undefined => {
   if (value.length === 0) return undefined
   try {
@@ -112,6 +117,7 @@ const safeHttpUrl = (value: string): string | undefined => {
   }
 }
 
+/** Extracts a short extension from a validated URL pathname for MIME inference. */
 const fileExtension = (value: string): string | undefined => {
   try {
     const match = /\.[a-z0-9]{1,16}$/i.exec(new URL(value).pathname)
@@ -121,6 +127,7 @@ const fileExtension = (value: string): string | undefined => {
   }
 }
 
+/** Infers common media MIME types while leaving unknown formats for the browser to resolve. */
 const mimeType = (value: string, type: OutputType): string | undefined => {
   const extension = fileExtension(value)
   if (extension === ".png") return "image/png"
@@ -133,4 +140,5 @@ const mimeType = (value: string, type: OutputType): string | undefined => {
   return undefined
 }
 
+/** Collapses presentation whitespace so captured text is stable across DOM layouts. */
 const normalizeText = (value: string): string => value.replace(/\s+/g, " ").trim()

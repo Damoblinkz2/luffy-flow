@@ -20,6 +20,7 @@ export const AdapterDiagnosticsCard = ({ source }: AdapterDiagnosticsCardProps) 
   )
   const [snapshot, setSnapshot] = useState<PlatformStatusSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [copyMessage, setCopyMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const inspect = async (): Promise<void> => {
@@ -30,6 +31,7 @@ export const AdapterDiagnosticsCard = ({ source }: AdapterDiagnosticsCardProps) 
     }
     setBusy(true)
     setError(null)
+    setCopyMessage(null)
     try {
       setSnapshot(
         await client.send({
@@ -47,6 +49,22 @@ export const AdapterDiagnosticsCard = ({ source }: AdapterDiagnosticsCardProps) 
       )
     } finally {
       setBusy(false)
+    }
+  }
+
+  const copyEvidence = async (): Promise<void> => {
+    if (snapshot?.adapterHealth === undefined) return
+    const evidence = {
+      recordedAt: new Date().toISOString(),
+      browserUserAgent: navigator.userAgent,
+      activeRoute: activePlatform.url,
+      snapshot,
+    }
+    try {
+      await copyText(JSON.stringify(evidence, null, 2))
+      setCopyMessage("Sanitized adapter evidence copied.")
+    } catch {
+      setCopyMessage("Diagnostics could not be copied. Select the visible checks manually.")
     }
   }
 
@@ -75,6 +93,16 @@ export const AdapterDiagnosticsCard = ({ source }: AdapterDiagnosticsCardProps) 
       >
         Inspect active tab
       </Button>
+      {snapshot?.adapterHealth === undefined ? null : (
+        <Button variant="ghost" onClick={() => void copyEvidence()}>
+          Copy sanitized evidence
+        </Button>
+      )}
+      {copyMessage === null ? null : (
+        <p className="text-sm" role="status">
+          {copyMessage}
+        </p>
+      )}
       {error === null ? null : <ErrorState message={error} onRetry={() => void inspect()} />}
       {snapshot?.adapterHealth === undefined ? null : (
         <div>
@@ -106,4 +134,26 @@ export const AdapterDiagnosticsCard = ({ source }: AdapterDiagnosticsCardProps) 
       )}
     </section>
   )
+}
+
+/** Copies diagnostic JSON through the modern API with a user-gesture fallback for older Chromium. */
+const copyText = async (value: string): Promise<void> => {
+  if (navigator.clipboard?.writeText !== undefined) {
+    try {
+      await navigator.clipboard.writeText(value)
+      return
+    } catch {
+      // Some extension contexts require the legacy selection path despite a direct button gesture.
+    }
+  }
+  const textarea = document.createElement("textarea")
+  textarea.value = value
+  textarea.setAttribute("readonly", "")
+  textarea.style.position = "fixed"
+  textarea.style.opacity = "0"
+  document.body.append(textarea)
+  textarea.select()
+  const copied = document.execCommand("copy")
+  textarea.remove()
+  if (!copied) throw new Error("The browser rejected the copy operation.")
 }

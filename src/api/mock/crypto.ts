@@ -3,12 +3,14 @@ import { sha256Hex } from "~/utils/digest"
 /** SHA-256 is adequate only for this development mock and is not production password storage. */
 export const digestMockSecret = (value: string): Promise<string> => sha256Hex(value)
 
+/** Creates a per-account random salt so identical mock passwords do not share a digest. */
 export const createMockSalt = (): string => {
   const bytes = new Uint8Array(16)
   crypto.getRandomValues(bytes)
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
+/** Combines the mock salt and password before hashing; production must use a slow password KDF. */
 export const hashMockPassword = (password: string, salt: string): Promise<string> =>
   digestMockSecret(`${salt}:${password}`)
 

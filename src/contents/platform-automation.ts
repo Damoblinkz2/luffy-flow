@@ -9,10 +9,10 @@ import { listenForRuntimeMessages, RuntimeMessageTransport } from "~/messaging/r
 import { createSettingsRepository } from "~/services/settings/create-settings-repository"
 import { PlasmoKeyValueStore } from "~/storage/PlasmoKeyValueStore"
 
-import { createContentCoordinator } from "./create-content-coordinator"
-import { registerContentHandlers } from "./register-content-handlers"
+import { createContentCoordinator } from "~/content-runtime/create-content-coordinator"
+import { registerContentHandlers } from "~/content-runtime/register-content-handlers"
 
-/** Content injection stays limited to the three official platform origins and X's Grok route. */
+/** Content injection stays limited to official platform origins and X's explicit Grok route. */
 export const config: PlasmoCSConfig = {
   matches: [
     "https://flow.google/*",
@@ -21,6 +21,8 @@ export const config: PlasmoCSConfig = {
     "https://gemini.google.com/*",
     "https://grok.com/*",
     "https://www.grok.com/*",
+    "https://meta.ai/*",
+    "https://www.meta.ai/*",
     "https://x.com/i/grok*",
     "https://www.x.com/i/grok*",
   ],
@@ -63,6 +65,7 @@ if (chrome.sidePanel === undefined) {
   })
 }
 
+/** Tears down listeners exactly once when the content script or document is unloaded. */
 const dispose = (): void => {
   if (disposed) return
   disposed = true

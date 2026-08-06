@@ -7,6 +7,8 @@ build/
 
 # Test output
 coverage/
+playwright-report/
+test-results/
 
 # Local environment files may contain backend configuration or secrets
 .env

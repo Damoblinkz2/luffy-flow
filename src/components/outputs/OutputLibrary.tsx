@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import {
   ConfirmDialog,
@@ -263,6 +263,7 @@ export const OutputLibrary = ({
             <option value="google-flow">Google Flow</option>
             <option value="gemini">Gemini</option>
             <option value="grok">Grok</option>
+            <option value="meta-ai">Meta AI</option>
           </SelectField>
           <SelectField
             id="output-type"
@@ -439,6 +440,7 @@ export const OutputLibrary = ({
   )
 }
 
+/** Prefers safe domain messages and hides raw implementation details from the output UI. */
 const messageFromError = (error: unknown): string =>
   error instanceof LuffyflowError
     ? error.userMessage

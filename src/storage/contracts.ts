@@ -16,7 +16,8 @@ export interface StorageMigration {
 export interface VersionedNamespaceOptions<T> {
   key: string
   currentVersion: number
-  schema: z.ZodType<T>
+  // Persisted input is unknown until parsed; only the validated output is guaranteed to be T.
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>
   store: KeyValueStore
   migrations?: readonly StorageMigration[]
   now?: () => Date

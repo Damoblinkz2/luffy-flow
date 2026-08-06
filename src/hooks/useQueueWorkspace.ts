@@ -331,6 +331,7 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
   }
 }
 
+/** Converts queue failures into user-safe workspace feedback. */
 const messageFromError = (error: unknown): string =>
   error instanceof LuffyflowError
     ? error.userMessage

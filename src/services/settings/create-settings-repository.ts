@@ -32,6 +32,7 @@ export const createSettingsRepository = (
   return new LocalSettingsRepository(namespace, () => createDefaultSettings(config, clock.now()))
 }
 
+/** Creates a schema-validated settings document from public build-time defaults. */
 const createDefaultSettings = (config: PublicAppConfig, now: Date): LuffyflowSettings =>
   luffyflowSettingsSchema.parse({
     schemaVersion: CURRENT_STORAGE_SCHEMA_VERSION,
@@ -52,10 +53,12 @@ const createDefaultSettings = (config: PublicAppConfig, now: Date): LuffyflowSet
       "google-flow": adapterDefaults(),
       gemini: adapterDefaults(),
       grok: adapterDefaults(),
+      "meta-ai": adapterDefaults(),
     },
     updatedAt: now.toISOString(),
   })
 
+/** Returns a fresh adapter policy so platforms never share a mutable settings object. */
 const adapterDefaults = () => ({
   enabled: true,
   generationStartTimeoutMs: DEFAULT_GENERATION_START_TIMEOUT_MS,

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { sequenceCounterSchema, type SequenceCounter } from "~/schemas"
 import type { VersionedNamespace } from "~/storage/contracts"

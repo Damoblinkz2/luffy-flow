@@ -66,9 +66,11 @@ export const OverviewPage = () => {
   )
 }
 
+/** Extracts the ownership key while keeping signed-out overview queries explicit. */
 const sessionUserId = (session: { user: { id: string } } | null): string | null =>
   session?.user.id ?? null
 
+/** Counts a user's paginated records without loading multiple pages into memory at once. */
 const countOwnedRecords = async (
   userId: string | null,
   read: (

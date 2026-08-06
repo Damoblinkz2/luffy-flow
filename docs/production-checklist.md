@@ -3,7 +3,7 @@
 This checklist is the release sign-off record for LuffyFlow. A checked automated item is not a substitute for the unchecked manual, security, legal, privacy, or platform-compatibility gates.
 
 **Current version:** `0.1.0`  
-**Checklist updated:** 2026-08-04  
+**Checklist updated:** 2026-08-06
 **Current disposition:** **Not approved for public production release**
 
 ## 1. Release identity and ownership
@@ -23,15 +23,20 @@ Run from a clean checkout with the committed lockfile:
 ```powershell
 corepack pnpm install --frozen-lockfile
 corepack pnpm run validate:release
+corepack pnpm run test:browser:install
+corepack pnpm run test:browser
 ```
 
 - [x] Strict TypeScript passes.
 - [x] Full-project ESLint passes with zero warnings.
 - [x] Prettier check passes.
-- [x] All 26 Vitest tests pass.
+- [x] All 29 Vitest tests pass, including toolbar-popup, Meta AI URL, and settings-upgrade coverage.
 - [x] The deterministic-core 80% coverage thresholds pass.
 - [x] Current coverage is 93.44% statements, 85.52% branches, 95.23% functions, and 93.69% lines.
 - [x] Chrome MV3 production build completes.
+- [x] Three production-extension Playwright smoke tests pass in an isolated Chrome for Testing profile.
+- [x] Popup, side panel, dashboard, and options render without uncaught production runtime errors.
+- [x] Mock login and session restoration work across all extension surfaces in real Chromium.
 - [ ] Repeat `validate:release` on the final clean release commit in CI.
 - [ ] Add CI artifacts for test results, coverage, manifest, dependency audit, and build archive.
 - [ ] Review or remediate package-manager peer/deprecation warnings before release.
@@ -40,10 +45,10 @@ corepack pnpm run validate:release
 
 Inspect `build/chrome-mv3-prod/manifest.json`, not only `package.json`.
 
-- [ ] **Blocker:** move non-entry helper modules out of Plasmo's reserved `src/contents` directory or give them explicit narrow content-script configurations.
-- [ ] **Blocker:** confirm the generated manifest contains no unintended `<all_urls>` content scripts.
-- [ ] Confirm content scripts run only on the documented Google Flow, Gemini, Grok, and X Grok routes.
-- [ ] Confirm `host_permissions` contains only origins required for shipped adapters.
+- [x] Move non-entry helper modules out of Plasmo's reserved `src/contents` directory.
+- [x] Confirm the generated manifest contains no unintended `<all_urls>` content scripts.
+- [x] Confirm the single content script runs only on documented Google Flow, Gemini, Grok, Meta AI, and X Grok routes.
+- [x] Confirm `host_permissions` contains only origins required for shipped adapters.
 - [ ] Replace the example optional backend permission with the exact production API origin or implement a user-initiated optional permission flow.
 - [ ] Reassess whether the full `tabs` permission is necessary or can be narrowed to `activeTab` plus explicit host permissions.
 - [ ] Confirm `storage`, `downloads`, `sidePanel`, and `alarms` are required and accurately disclosed.
@@ -54,7 +59,7 @@ Inspect `build/chrome-mv3-prod/manifest.json`, not only `package.json`.
 
 ## 4. Platform authorization and policy — blocking
 
-- [ ] Review Google Flow, Gemini, Grok, and X terms applicable to UI automation.
+- [ ] Review Google Flow, Gemini, Grok, Meta AI, and X terms applicable to UI automation.
 - [ ] Obtain written permission where required.
 - [ ] Confirm the product does not claim affiliation with Google, xAI, X, or other platform owners.
 - [ ] Confirm automation does not bypass authentication, access controls, CAPTCHAs, rate limits, or paid entitlements.
@@ -92,6 +97,15 @@ Use dedicated test accounts and non-sensitive prompts. Record browser version, a
 - [ ] Verify authentication-required detection.
 - [ ] Verify prompt input discovery, text entry, and exactly one submit action.
 - [ ] Verify streaming start/completion and final output extraction.
+- [ ] Verify navigation changes, rate limits, service errors, cancellation, and retry behavior.
+
+### Meta AI
+
+- [ ] Verify `meta.ai` and `www.meta.ai` redirect and conversation routes.
+- [ ] Verify authentication-required detection.
+- [ ] Verify prompt input discovery, text entry, and exactly one submit action.
+- [ ] Verify generation start/completion and final text output extraction.
+- [ ] Verify generated image detection and accessible media URLs where the product exposes them.
 - [ ] Verify navigation changes, rate limits, service errors, cancellation, and retry behavior.
 
 ### Cross-platform adapter checks

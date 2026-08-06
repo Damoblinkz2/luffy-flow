@@ -18,11 +18,13 @@ export interface SubscriptionSnapshot {
 
 /** Billing service presents one provider-neutral workflow to stores and pages. */
 export class SubscriptionService {
+  /** Combines billing and usage clients behind one store-facing service. */
   constructor(
     private readonly billingApi: BillingApi,
     private readonly usageApi: UsageApi,
   ) {}
 
+  /** Loads subscription, usage, and invoices concurrently as one consistent screen snapshot. */
   async load(): Promise<SubscriptionSnapshot> {
     const [subscription, usage, invoices] = await Promise.all([
       this.billingApi.getSubscription(),
@@ -32,18 +34,22 @@ export class SubscriptionService {
     return { subscription, usage, invoices }
   }
 
+  /** Starts hosted checkout for a paid plan and passes through its redirect result. */
   checkout(planId: Exclude<PlanId, "free">, returnUrl: string): Promise<CheckoutResult> {
     return this.billingApi.checkout({ planId, returnUrl })
   }
 
+  /** Requests a provider-neutral plan transition. */
   changePlan(planId: PlanId): Promise<Subscription> {
     return this.billingApi.changePlan(planId)
   }
 
+  /** Schedules or applies cancellation according to the billing API policy. */
   cancel(): Promise<Subscription> {
     return this.billingApi.cancel()
   }
 
+  /** Records one metered action with retry-safe idempotency. */
   incrementUsage(idempotencyKey: string): Promise<Usage> {
     return this.usageApi.increment(idempotencyKey)
   }

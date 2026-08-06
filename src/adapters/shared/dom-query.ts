@@ -96,11 +96,13 @@ export const waitForElement = <T extends Element>(
     inspect()
   })
 
+/** Preserves an explicit cancellation reason and supplies a standard AbortError otherwise. */
 const abortReason = (signal: AbortSignal): Error =>
   signal.reason instanceof Error
     ? signal.reason
     : new DOMException("The DOM operation was aborted.", "AbortError")
 
+/** Normalizes arbitrary observer failures so callers always receive an Error instance. */
 const asError = (value: unknown): Error =>
   value instanceof Error ? value : new Error("A DOM observation failed.", { cause: value })
 

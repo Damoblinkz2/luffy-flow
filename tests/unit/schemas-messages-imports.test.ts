@@ -45,6 +45,41 @@ describe("runtime schemas and messages", () => {
       }).success,
     ).toBe(false)
   })
+
+  it("adds safe Meta AI adapter defaults to settings saved before platform support", () => {
+    const settings = luffyflowSettingsSchema.parse({
+      schemaVersion: 1,
+      defaultPromptDelayMs: 8_000,
+      maximumRetryCount: 2,
+      defaultOutputFileFormat: "md",
+      outputNamingPattern: "{platform}-{sequence}",
+      sequencePadding: 3,
+      sequenceScope: "global",
+      autoSaveOutputs: true,
+      autoDownloadOutputs: false,
+      theme: "system",
+      useMockApi: true,
+      backendBaseUrl: "https://api.example.com",
+      debugLogging: false,
+      privacyMode: true,
+      platformAdapters: {
+        "google-flow": adapterSettings(),
+        gemini: adapterSettings(),
+        grok: adapterSettings(),
+      },
+      updatedAt: "2026-08-06T00:00:00.000Z",
+    })
+
+    expect(settings.platformAdapters["meta-ai"]).toEqual(adapterSettings())
+  })
+})
+
+/** Produces a fresh valid adapter policy for schema-isolation assertions. */
+const adapterSettings = () => ({
+  enabled: true,
+  generationStartTimeoutMs: 30_000,
+  generationCompleteTimeoutMs: 600_000,
+  selectorOverrides: {},
 })
 
 describe("prompt imports", () => {

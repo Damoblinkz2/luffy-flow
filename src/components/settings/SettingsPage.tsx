@@ -9,6 +9,7 @@ import {
   luffyflowSettingsSchema,
   selectorOverridesSchema,
   type LuffyflowSettings,
+  type LuffyflowSettingsInput,
   type SupportedPlatform,
 } from "~/schemas"
 
@@ -18,6 +19,7 @@ const ADAPTERS: { id: SupportedPlatform; label: string }[] = [
   { id: "google-flow", label: "Google Flow" },
   { id: "gemini", label: "Gemini" },
   { id: "grok", label: "Grok" },
+  { id: "meta-ai", label: "Meta AI" },
 ]
 
 /** Settings use one Zod-backed form and keep advanced selector JSON non-executable. */
@@ -32,13 +34,16 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
     "google-flow": "{}",
     gemini: "{}",
     grok: "{}",
+    "meta-ai": "{}",
   })
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<LuffyflowSettings>({ resolver: zodResolver(luffyflowSettingsSchema) })
+  } = useForm<LuffyflowSettingsInput, unknown, LuffyflowSettings>({
+    resolver: zodResolver(luffyflowSettingsSchema),
+  })
 
   useEffect(() => {
     let active = true
@@ -54,6 +59,11 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
           ),
           gemini: JSON.stringify(settings.platformAdapters.gemini.selectorOverrides, null, 2),
           grok: JSON.stringify(settings.platformAdapters.grok.selectorOverrides, null, 2),
+          "meta-ai": JSON.stringify(
+            settings.platformAdapters["meta-ai"].selectorOverrides,
+            null,
+            2,
+          ),
         })
         setLoading(false)
       },
@@ -78,6 +88,7 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
         ),
         gemini: selectorOverridesSchema.parse(JSON.parse(selectorJson.gemini) as unknown),
         grok: selectorOverridesSchema.parse(JSON.parse(selectorJson.grok) as unknown),
+        "meta-ai": selectorOverridesSchema.parse(JSON.parse(selectorJson["meta-ai"]) as unknown),
       }
       const parsed = luffyflowSettingsSchema.parse({
         ...values,
@@ -88,6 +99,10 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
           },
           gemini: { ...values.platformAdapters.gemini, selectorOverrides: overrides.gemini },
           grok: { ...values.platformAdapters.grok, selectorOverrides: overrides.grok },
+          "meta-ai": {
+            ...values.platformAdapters["meta-ai"],
+            selectorOverrides: overrides["meta-ai"],
+          },
         },
         updatedAt: new Date().toISOString(),
       })
@@ -392,6 +407,7 @@ interface NumberFieldProps {
   inputProps: UseFormRegisterReturn
 }
 
+/** Keeps numeric setting labels, constraints, and validation feedback visually consistent. */
 const NumberField = ({ id, label, min, max, error, inputProps }: NumberFieldProps) => (
   <div>
     <label className="af-label" htmlFor={id}>
@@ -402,6 +418,7 @@ const NumberField = ({ id, label, min, max, error, inputProps }: NumberFieldProp
   </div>
 )
 
+/** Adapts callback-based extension storage clearing into an awaitable operation. */
 const clearChromeLocalStorage = (): Promise<void> =>
   new Promise((resolve, reject) =>
     chrome.storage.local.clear(() => {
@@ -411,6 +428,7 @@ const clearChromeLocalStorage = (): Promise<void> =>
     }),
   )
 
+/** Waits for IndexedDB deletion and surfaces blocked or browser-level failures. */
 const deleteIndexedDatabase = (name: string): Promise<void> =>
   new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(name)
@@ -419,6 +437,7 @@ const deleteIndexedDatabase = (name: string): Promise<void> =>
     request.onblocked = () => reject(new Error("Close other LuffyFlow pages before clearing data."))
   })
 
+/** Follows repository cursors until an export contains every matching record. */
 const readAllRecords = async <T,>(
   read: (cursor: string | undefined) => Promise<{ items: T[]; nextCursor?: string }>,
 ): Promise<T[]> => {
@@ -432,6 +451,7 @@ const readAllRecords = async <T,>(
   return records
 }
 
+/** Serializes a local backup and hands its temporary object URL to Chrome downloads. */
 const downloadJsonFile = (filename: string, value: unknown): Promise<void> => {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),

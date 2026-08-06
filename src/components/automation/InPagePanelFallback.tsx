@@ -17,6 +17,7 @@ export const InPagePanelFallback = ({ onClose }: InPagePanelFallbackProps) => (
   </ApplicationProviders>
 )
 
+/** Renders the isolated in-page controls while the error boundary owns crash recovery. */
 const InPagePanelBody = ({ onClose }: InPagePanelFallbackProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const status = useAuthStore((state) => state.status)

@@ -113,6 +113,7 @@ export class IndexedDbOutputRepository implements OutputRepository {
   }
 }
 
+/** Applies ownership, type, status, and case-insensitive search filters in memory. */
 const matchesOutput = (record: OutputRecord, filters: OutputFilters): boolean => {
   const search = filters.search?.toLocaleLowerCase()
   const searchable =
@@ -127,6 +128,7 @@ const matchesOutput = (record: OutputRecord, filters: OutputFilters): boolean =>
   )
 }
 
+/** Sorts a disposable result array according to the caller's requested field and direction. */
 const sortOutputs = (records: OutputRecord[], filters: OutputFilters): OutputRecord[] =>
   records.sort((left, right) => {
     if (filters.sort === "created_asc") return left.createdAt.localeCompare(right.createdAt)
@@ -135,9 +137,11 @@ const sortOutputs = (records: OutputRecord[], filters: OutputFilters): OutputRec
     return right.createdAt.localeCompare(left.createdAt)
   })
 
+/** Recognizes IndexedDB uniqueness failures so they can become domain conflicts. */
 const isConstraintError = (error: unknown): boolean =>
   error instanceof DOMException && error.name === "ConstraintError"
 
+/** Omits nullable optional fields so IndexedDB indexes do not treat null as an indexed value. */
 const removeNullOutputProperties = (record: Record<string, unknown>): void => {
   if (record.userDefinedName === null) delete record.userDefinedName
   if (record.downloadedAt === null) delete record.downloadedAt

@@ -5,6 +5,7 @@ import {
   createMessageResponseSchema,
   type MessageKind,
   type MessagePayload,
+  type MessageResponse,
   type MessageSource,
   type MessageTarget,
 } from "~/schemas/messages"
@@ -14,11 +15,13 @@ import type { MessageTransport } from "./runtime-transport"
 
 /** Typed client validates both the outbound envelope and correlated response data. */
 export class TypedMessageClient {
+  /** Binds every outbound message to one source context and transport. */
   constructor(
     private readonly source: MessageSource,
     private readonly transport: MessageTransport,
   ) {}
 
+  /** Builds, sends, correlates, validates, and unwraps one typed extension request. */
   async send<TKind extends MessageKind, TResponse>(options: {
     kind: TKind
     payload: MessagePayload<TKind>
@@ -34,7 +37,11 @@ export class TypedMessageClient {
 
     try {
       const rawResponse = await this.transport.send(message)
-      const response = createMessageResponseSchema(options.responseSchema).parse(rawResponse)
+      // Runtime parsing proves the union shape; the explicit contract restores generic narrowing
+      // that Zod 3 cannot preserve through this dynamically constructed schema.
+      const response = createMessageResponseSchema(options.responseSchema).parse(
+        rawResponse,
+      ) as MessageResponse<TResponse>
       if (!response.ok) {
         throw new LuffyflowError({
           code: response.error.code,

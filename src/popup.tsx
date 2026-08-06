@@ -103,7 +103,7 @@ const PopupBody = () => {
           )}
         </div>
         <p className="af-muted mt-2">
-          {platform.displayName ?? "Open Google Flow, Gemini, or Grok."}
+          {platform.displayName ?? "Open Google Flow, Gemini, Grok, or Meta AI."}
         </p>
         {platform.supported ? (
           <Button className="mt-3 w-full" onClick={() => void openSidePanelOrDashboard()}>

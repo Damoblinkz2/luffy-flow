@@ -101,6 +101,7 @@ export const createBillingStore = (service: SubscriptionService): StoreApi<Billi
     },
   }))
 
+/** Reduces billing failures to safe messages suitable for persistent store state. */
 const messageFromError = (error: unknown): string =>
   error instanceof LuffyflowError
     ? error.userMessage

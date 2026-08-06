@@ -14,16 +14,19 @@ export class GeminiAdapter extends ObservedPlatformAdapter {
   protected override readonly selectors: AdapterSelectorConfig
   protected override readonly textSignals = geminiTextSignals
 
+  /** Applies user-supplied selector corrections without mutating the shipped defaults. */
   constructor(overrides: PlatformAdapterSettings["selectorOverrides"] = {}) {
     super()
     this.selectors = applySelectorOverrides(geminiSelectors, overrides)
   }
 
+  /** Restricts injection to Gemini's HTTPS conversation routes. */
   override isSupportedUrl(url: URL): boolean {
     if (url.protocol !== "https:" || url.hostname !== "gemini.google.com") return false
     return url.pathname === "/" || /^\/(?:u\/\d+\/)?app(?:\/|$)/.test(url.pathname)
   }
 
+  /** Converts the latest Gemini response container into a normalized text output. */
   protected override detectOutput(element: HTMLElement): DetectedOutput | null {
     return detectTextOutput(element)
   }

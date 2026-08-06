@@ -7,7 +7,7 @@
 
 ## 1. Scope and product boundaries
 
-LuffyFlow is a browser extension that helps an authenticated user prepare a queue of prompts, submit those prompts through the visible interfaces of Google Flow, Google Gemini, and Grok, detect the resulting outputs, and organize or download the output records.
+LuffyFlow is a browser extension that helps an authenticated user prepare a queue of prompts, submit those prompts through the visible interfaces of Google Flow, Google Gemini, Grok, and Meta AI, detect the resulting outputs, and organize or download the output records.
 
 The extension automates only actions that an authenticated user can perform in the visible website UI. It will not bypass authentication, CAPTCHAs, rate limits, signed-URL restrictions, cross-origin protections, platform permissions, or anti-bot systems. Rate-limit or service-unavailable signals pause the queue and require the user to decide when it is safe to resume.
 
@@ -76,7 +76,7 @@ Every website has a separate adapter package containing:
 - Output extractors appropriate for text and media.
 - Adapter-specific fixtures and contract tests.
 
-Shared DOM utilities know how to observe, retry, dispatch framework-compatible events, detect stable DOM state, and handle cancellation. They do not know any Google Flow, Gemini, or Grok selectors.
+Shared DOM utilities know how to observe, retry, dispatch framework-compatible events, detect stable DOM state, and handle cancellation. They do not know any Google Flow, Gemini, Grok, or Meta AI selectors.
 
 ### 2.4 Queue durability and single-run safety
 
@@ -375,7 +375,7 @@ The declarations below are the contract baseline. Stage 3 will implement them as
 type EntityId = string
 type IsoDateTime = string
 
-type SupportedPlatform = "google-flow" | "gemini" | "grok"
+type SupportedPlatform = "google-flow" | "gemini" | "grok" | "meta-ai"
 type OutputType = "text" | "image" | "video" | "audio" | "file" | "unknown"
 type PromptStatus =
   | "draft"
@@ -1321,6 +1321,7 @@ Host permissions are limited to supported origins:
 https://labs.google/fx/*
 https://gemini.google.com/*
 https://grok.com/*
+https://meta.ai/*
 https://x.com/i/grok*
 ```
 
@@ -1426,7 +1427,7 @@ The following rules must remain true in later stages:
 
 - The workspace started empty, so there is no existing implementation or configuration to preserve.
 - Stage 1 intentionally includes documentation contracts rather than compilable TypeScript modules; those begin in Stage 3 after Stage 2 establishes toolchain versions and configuration.
-- Google Flow, Gemini, and Grok selectors and exact supported routes have not been live-verified.
+- Google Flow, Gemini, Grok, and Meta AI selectors and exact supported routes have not been live-verified.
 - `.txt` import is defined as one non-empty line per prompt. JSON or CSV should be used for prompts that contain embedded line breaks.
 - Mock authentication, subscription, checkout, and remote sync are development placeholders.
 - Only Chromium browsers are in the supported target for the initial release.

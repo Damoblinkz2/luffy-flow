@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { adapterHealthSchema, detectedOutputSchema } from "./adapter"
 import { userSchema } from "./auth"

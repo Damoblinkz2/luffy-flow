@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 /** Opaque UUIDs prevent accidental mixing with human-readable identifiers. */
 export const entityIdSchema = z.string().uuid()
@@ -7,7 +7,7 @@ export const entityIdSchema = z.string().uuid()
 export const isoDateTimeSchema = z.string().datetime({ offset: true })
 
 /** Platforms are closed at runtime so unsupported pages cannot enter a queue. */
-export const supportedPlatformSchema = z.enum(["google-flow", "gemini", "grok"])
+export const supportedPlatformSchema = z.enum(["google-flow", "gemini", "grok", "meta-ai"])
 
 /** Output kinds cover text and the media-oriented results produced by Google Flow. */
 export const outputTypeSchema = z.enum(["text", "image", "video", "audio", "file", "unknown"])

@@ -73,7 +73,9 @@ export const AutomationWorkspace = ({ source, compact = false }: AutomationWorks
       activePlatform.platform === undefined ||
       activePlatform.adapterVersion === undefined
     ) {
-      return Promise.reject(new Error("Open Google Flow, Gemini, or Grok in the active tab first."))
+      return Promise.reject(
+        new Error("Open Google Flow, Gemini, Grok, or Meta AI in the active tab first."),
+      )
     }
     return queue.addDrafts({
       texts,
@@ -111,8 +113,8 @@ export const AutomationWorkspace = ({ source, compact = false }: AutomationWorks
         )}
         {!activePlatform.loading && !activePlatform.supported ? (
           <p className="mt-3 text-sm">
-            Open an official Google Flow, Gemini, or Grok page. LuffyFlow does not request access to
-            unrelated sites.
+            Open an official Google Flow, Gemini, Grok, or Meta AI page. LuffyFlow does not request
+            access to unrelated sites.
           </p>
         ) : null}
       </section>

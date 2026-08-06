@@ -1,4 +1,4 @@
-import { z } from "zod"
+import * as z from "zod/v3"
 
 import { isoDateTimeSchema } from "./common"
 
@@ -18,6 +18,14 @@ export const platformAdapterSettingsSchema = z.object({
   generationCompleteTimeoutMs: z.number().int().min(10_000).max(1_800_000),
   selectorOverrides: selectorOverridesSchema,
 })
+
+/** New adapters receive safe defaults when older version-one settings are read. */
+const defaultPlatformAdapterSettings = {
+  enabled: true,
+  generationStartTimeoutMs: 30_000,
+  generationCompleteTimeoutMs: 600_000,
+  selectorOverrides: {},
+} as const
 
 /** Settings defaults are applied by a service so migrations can distinguish missing values. */
 export const luffyflowSettingsSchema = z.object({
@@ -39,6 +47,7 @@ export const luffyflowSettingsSchema = z.object({
     "google-flow": platformAdapterSettingsSchema,
     gemini: platformAdapterSettingsSchema,
     grok: platformAdapterSettingsSchema,
+    "meta-ai": platformAdapterSettingsSchema.default(defaultPlatformAdapterSettings),
   }),
   updatedAt: isoDateTimeSchema,
 })
@@ -47,4 +56,5 @@ export type ThemePreference = z.infer<typeof themePreferenceSchema>
 export type SequenceScope = z.infer<typeof sequenceScopeSchema>
 export type TextExportFormat = z.infer<typeof textExportFormatSchema>
 export type PlatformAdapterSettings = z.infer<typeof platformAdapterSettingsSchema>
+export type LuffyflowSettingsInput = z.input<typeof luffyflowSettingsSchema>
 export type LuffyflowSettings = z.infer<typeof luffyflowSettingsSchema>

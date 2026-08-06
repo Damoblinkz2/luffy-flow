@@ -9,6 +9,12 @@
   "engines": {
     "node": ">=20.19.0"
   },
+  "targets": {
+    "default": {
+      "context": "browser",
+      "includeNodeModules": true
+    }
+  },
   "packageManager": "pnpm@10.34.5",
   "scripts": {
     "build": "plasmo build --target=chrome-mv3",
@@ -20,11 +26,15 @@
     "package": "plasmo package --target=chrome-mv3",
     "prepare": "husky",
     "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:headed": "playwright test --headed",
+    "test:browser:install": "playwright install chromium",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "validate": "corepack pnpm run typecheck && corepack pnpm run lint && corepack pnpm run test && corepack pnpm run format:check",
-    "validate:release": "corepack pnpm run validate && corepack pnpm run test:coverage && corepack pnpm run build"
+    "validate:release": "corepack pnpm run validate && corepack pnpm run test:coverage && corepack pnpm run build",
+    "validate:stage10": "corepack pnpm run validate:release && corepack pnpm run test:browser"
   },
   "dependencies": {
     "@hookform/resolvers": "5.5.7",
@@ -36,11 +46,12 @@
     "react-dom": "19.2.8",
     "react-hook-form": "7.83.0",
     "react-router-dom": "6.30.4",
-    "zod": "4.4.3",
+    "zod": "3.25.76",
     "zustand": "5.0.14"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@playwright/test": "1.62.1",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "7.0.0",
     "@testing-library/react": "16.3.2",
@@ -82,6 +93,8 @@
       "https://gemini.google.com/*",
       "https://grok.com/*",
       "https://www.grok.com/*",
+      "https://meta.ai/*",
+      "https://www.meta.ai/*",
       "https://x.com/*"
     ],
     "optional_host_permissions": [

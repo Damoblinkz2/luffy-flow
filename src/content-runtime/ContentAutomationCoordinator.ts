@@ -21,6 +21,7 @@ export class ContentAutomationCoordinator {
     private readonly onGenerationStarted?: (promptId: string) => Promise<void>,
   ) {}
 
+  /** Executes one leased prompt end to end while rejecting duplicates and stale generations. */
   async submit(message: MessageOf<"prompt/submit">): Promise<DetectedOutput> {
     const payload = message.payload
     const commandKey = `${payload.queueId}:${payload.leaseGeneration}:${payload.promptId}`
@@ -91,6 +92,7 @@ export class ContentAutomationCoordinator {
     }
   }
 
+  /** Cancels only the matching active command so delayed cancellation cannot stop newer work. */
   async cancel(commandId: string, reason: string): Promise<void> {
     if (this.active === null || this.active.commandId !== commandId) return
     const adapter = this.registry.detect(new URL(globalThis.location.href))
@@ -130,12 +132,14 @@ export class ContentAutomationCoordinator {
     )
   }
 
+  /** Aborts remaining DOM work and releases observers owned by the adapter registry. */
   dispose(): void {
     this.active?.controller.abort(new DOMException("Content coordinator disposed.", "AbortError"))
     this.active = null
     this.registry.dispose()
   }
 
+  /** Pins commands to the expected adapter version to avoid running stale DOM assumptions. */
   private requireAdapter(
     id: MessageOf<"prompt/submit">["payload"]["adapterId"],
     version: string,
@@ -153,6 +157,7 @@ export class ContentAutomationCoordinator {
   }
 }
 
+/** Converts adapter-level result objects into the application's shared throwable error type. */
 const unwrap = <T>(result: AdapterResult<T>): T => {
   if (result.ok) return result.value
   throw new LuffyflowError({
@@ -165,6 +170,7 @@ const unwrap = <T>(result: AdapterResult<T>): T => {
   })
 }
 
+/** Maps low-level adapter codes to the categories used by retry and user-message policies. */
 const categoryForAdapterError = (code: string): ErrorCategory => {
   if (code === "selector_not_found") return "selector_not_found"
   if (code === "input_unavailable") return "prompt_input_unavailable"
@@ -174,6 +180,7 @@ const categoryForAdapterError = (code: string): ErrorCategory => {
   return "submission_failure"
 }
 
+/** Provides actionable guidance for each platform readiness state. */
 const readinessMessage = (readiness: string): string => {
   if (readiness === "authentication_required")
     return "Log in to the AI platform before starting LuffyFlow."
@@ -185,6 +192,7 @@ const readinessMessage = (readiness: string): string => {
   return "The platform page is not ready for prompt submission."
 }
 
+/** Creates the authorization error used when a command no longer owns the current lease or route. */
 const staleCommandError = () =>
   new LuffyflowError({
     code: "CONTENT_COMMAND_STALE",
@@ -192,6 +200,7 @@ const staleCommandError = () =>
     userMessage: "LuffyFlow rejected a stale content-script command.",
   })
 
+/** Bounds the in-memory duplicate cache by evicting insertion-ordered oldest entries. */
 const trimSet = (values: Set<string>, maximumSize: number): void => {
   while (values.size > maximumSize) {
     const oldest: string | undefined = values.values().next().value
@@ -200,4 +209,5 @@ const trimSet = (values: Set<string>, maximumSize: number): void => {
   }
 }
 
+/** Identifies meaningful SPA navigation while ignoring query-only changes. */
 const contentRouteKey = (url: URL): string => `${url.hostname}${url.pathname}${url.hash}`

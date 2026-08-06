@@ -8,6 +8,7 @@ export interface ChromeMockControls {
 
 export type ChromeMock = typeof chrome & { __controls: ChromeMockControls }
 
+/** Creates an isolated Chrome API double with observable storage and download side effects. */
 export const createChromeMock = (): ChromeMock => {
   const storedValues = new Map<string, unknown>()
   const downloadRequests: chrome.downloads.DownloadOptions[] = []
@@ -33,16 +34,20 @@ export const createChromeMock = (): ChromeMock => {
     },
     storage: {
       local: {
-        get: vi.fn((key: string, callback: (items: Record<string, unknown>) => void) =>
-          callback(storedValues.has(key) ? { [key]: storedValues.get(key) } : {}),
-        ),
+        get: vi.fn((key: string, callback?: (items: Record<string, unknown>) => void) => {
+          const items = storedValues.has(key) ? { [key]: storedValues.get(key) } : {}
+          callback?.(items)
+          return callback === undefined ? Promise.resolve(items) : undefined
+        }),
         set: vi.fn((items: Record<string, unknown>, callback?: () => void) => {
           for (const [key, value] of Object.entries(items)) storedValues.set(key, value)
           callback?.()
+          return callback === undefined ? Promise.resolve() : undefined
         }),
         remove: vi.fn((key: string, callback?: () => void) => {
           storedValues.delete(key)
           callback?.()
+          return callback === undefined ? Promise.resolve() : undefined
         }),
       },
     },
@@ -81,4 +86,5 @@ export const createChromeMock = (): ChromeMock => {
   return chromeMock as unknown as ChromeMock
 }
 
+/** Exposes test-only controls attached to the currently installed global Chrome mock. */
 export const chromeControls = (): ChromeMockControls => (globalThis.chrome as ChromeMock).__controls

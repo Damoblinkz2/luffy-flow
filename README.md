@@ -9,6 +9,7 @@ The project currently supports adapters for:
 - Google Flow
 - Google Gemini
 - Grok, including the explicit X `/i/grok` route
+- Meta AI on its standalone `meta.ai` web experience
 
 LuffyFlow is at version `0.1.0`. It has a passing production build and automated validation pipeline, but it is not yet approved for public release. See [Production readiness](#production-readiness) and the [production checklist](docs/production-checklist.md).
 
@@ -34,15 +35,16 @@ LuffyFlow does not bypass authentication, CAPTCHAs, rate limits, paywalls, or pl
 | ----------------------------------------- | ------------------------------------------------------------------ |
 | Strict TypeScript                         | Passing                                                            |
 | ESLint and Prettier                       | Passing                                                            |
-| Automated tests                           | 26 passing tests across 7 files                                    |
+| Automated tests                           | 29 passing tests across 8 files                                    |
+| Production browser smoke tests            | 3 passing Playwright tests in isolated Chrome for Testing          |
 | Deterministic-core coverage               | 93.44% statements, 85.52% branches, 95.23% functions, 93.69% lines |
 | Chrome MV3 production build               | Passing                                                            |
 | Live authenticated adapter verification   | Pending                                                            |
-| Least-privilege generated manifest review | Blocked; see below                                                 |
+| Least-privilege generated manifest review | Passing; no generated `<all_urls>` content scripts                 |
 | Production backend and billing            | Not implemented; mock mode only by default                         |
 | Chrome Web Store readiness                | Pending                                                            |
 
-The generated manifest currently registers helper modules from Plasmo's reserved `src/contents` directory as `<all_urls>` content scripts. The declared host permissions remain platform-specific, but this generated content-script scope must be corrected and re-audited before public distribution.
+The generated manifest contains one narrowly matched platform content script. Shared coordinator modules live outside Plasmo's reserved `src/contents` entry directory so they are bundled as dependencies rather than registered independently.
 
 ## Requirements
 
@@ -155,6 +157,7 @@ Navigate to an authenticated supported route:
 - `https://gemini.google.com/` or `/app/...`
 - `https://grok.com/`
 - `https://x.com/i/grok`
+- `https://meta.ai/`
 
 Open LuffyFlow's popup and use the side panel or dashboard workspace. Unsupported pages remain read-only and cannot start a queue.
 
@@ -211,7 +214,7 @@ flowchart LR
   BG --> QUEUE[Queue service and durable lease]
   BG --> DATA[(Chrome storage and IndexedDB)]
   BG -->|Tab messages| CONTENT[Content coordinator]
-  CONTENT --> ADAPTER[Google Flow / Gemini / Grok adapter]
+  CONTENT --> ADAPTER[Google Flow / Gemini / Grok / Meta AI adapter]
   ADAPTER --> PAGE[Visible authenticated platform UI]
   ADAPTER -->|Detected output| BG
   BG --> DOWNLOADS[Chromium downloads API]
@@ -239,7 +242,7 @@ See [architecture.md](docs/architecture.md) for the detailed design and staged d
 | `sidePanel` | Preferred in-context workspace.                                                |
 | `alarms`    | Worker-safe maintenance and recovery hints.                                    |
 
-Declared host permissions cover only the documented Google Flow, Gemini, Grok, and X hosts. The example backend origin is optional. However, the generated content-script match scope currently includes `<all_urls>` for helper entry points; removing that generated scope is a production blocker.
+Declared host permissions cover only the documented Google Flow, Gemini, Grok, Meta AI, and X hosts. The example backend origin is optional. The generated manifest contains no `<all_urls>` content-script entries.
 
 Incognito mode is disabled.
 
@@ -267,14 +270,19 @@ corepack pnpm run typecheck
 corepack pnpm run lint
 corepack pnpm test
 corepack pnpm run test:coverage
+corepack pnpm run test:browser:install
+corepack pnpm run test:browser
 corepack pnpm run format:check
 corepack pnpm run build
 corepack pnpm run validate:release
+corepack pnpm run validate:stage10
 ```
 
 The tests include browser API mocks and an integration-style workflow covering mock login, TXT import, queue execution, mock output capture, persistent sequence naming, and download completion.
 
 Coverage percentages apply to deterministic, platform-independent invariants: filename/output naming, queue-state transitions, and versioned storage. They do not claim live Chromium or live AI-platform end-to-end coverage.
+
+The Playwright suite loads the production extension into an isolated Chrome for Testing profile and checks manifest assets, signed-out surfaces, mock login, and cross-surface session restoration. It does not reuse personal browser data or claim authenticated live-platform coverage. Follow [Stage 10 browser validation](docs/stage-10-browser-validation.md) for live adapter evidence.
 
 ## Data and recovery behavior
 
@@ -286,6 +294,10 @@ Coverage percentages apply to deterministic, platform-independent invariants: fi
 - Media source URLs may expire with the platform session.
 
 ## Troubleshooting
+
+### Clicking the toolbar icon shows nothing
+
+Run `corepack pnpm run build`, then open `chrome://extensions` and load or reload the exact `build/chrome-mv3-prod` directory. Do not load the repository root or `.plasmo`; development output also requires `corepack pnpm run dev` to remain running. If an older unpacked copy is installed, remove it before loading the production directory again. The generated manifest must show `popup.html` under `action.default_popup`.
 
 ### The active page is unsupported
 
@@ -313,8 +325,7 @@ Keep the Parcel-compatible `.postcssrc.json` file. This Plasmo/Parcel toolchain 
 
 ## Known limitations
 
-- Google Flow, Gemini, and Grok selectors have not been validated against authenticated live pages in this environment.
-- The generated manifest currently includes unintended `<all_urls>` content-script entries for helper modules.
+- Google Flow, Gemini, Grok, and Meta AI selectors have not been validated against authenticated live pages in this environment.
 - Authentication, billing, subscription, invoices, and usage limits are development mocks by default.
 - Automatic save/download settings are persisted but are not yet a complete unattended output pipeline.
 - Browser download-ID tracking is in memory and can be lost when the background worker is suspended.
@@ -327,13 +338,12 @@ Keep the Parcel-compatible `.postcssrc.json` file. This Plasmo/Parcel toolchain 
 
 Automated build quality is green, but public release remains blocked by:
 
-1. Removing unintended `<all_urls>` content-script registration and re-auditing the built manifest.
-2. Validating every platform adapter on authenticated live pages.
-3. Reviewing each platform's terms and obtaining any required permission for automation.
-4. Implementing and security-reviewing the production backend, authentication, billing, and usage enforcement—or removing those product claims.
-5. Publishing privacy, support, retention, and account-deletion policies.
-6. Completing accessibility, upgrade/migration, worker-suspension, and cross-browser smoke tests.
-7. Choosing a license and preparing signed store artifacts and listing assets.
+1. Validating every platform adapter on authenticated live pages.
+2. Reviewing each platform's terms and obtaining any required permission for automation.
+3. Implementing and security-reviewing the production backend, authentication, billing, and usage enforcement—or removing those product claims.
+4. Publishing privacy, support, retention, and account-deletion policies.
+5. Completing accessibility, upgrade/migration, worker-suspension, and cross-browser smoke tests.
+6. Choosing a license and preparing signed store artifacts and listing assets.
 
 Use [docs/production-checklist.md](docs/production-checklist.md) as the release sign-off record.
 
@@ -346,7 +356,8 @@ src/adapters/                   Platform contracts, selectors, and DOM automatio
 src/api/                        Typed API client, HTTP transport, and mock routes
 src/background/                 Queue orchestration and MV3 worker runtime
 src/components/                 Reusable React UI
-src/contents/                   Plasmo content-script entries and current helpers
+src/content-runtime/            Shared content coordination and message handlers
+src/contents/                   Narrow Plasmo content-script entry
 src/messaging/                  Validated extension message transport/router
 src/schemas/                    Zod runtime schemas and inferred domain types
 src/services/                   Auth, billing, queue, naming, output, and download logic

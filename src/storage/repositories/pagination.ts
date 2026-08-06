@@ -15,6 +15,7 @@ export const paginateRecords = <T>(records: T[], page: PageRequest): PageResult<
   }
 }
 
+/** Decodes the opaque list cursor into an array offset while rejecting tampered values. */
 const decodeCursor = (cursor: string | undefined): number => {
   if (cursor === undefined) return 0
   if (!cursor.startsWith(CURSOR_PREFIX)) throw invalidCursorError()
@@ -23,6 +24,7 @@ const decodeCursor = (cursor: string | undefined): number => {
   return offset
 }
 
+/** Returns a consistent client-facing error for malformed pagination cursors. */
 const invalidCursorError = () =>
   new LuffyflowError({
     code: "PAGINATION_CURSOR_INVALID",
