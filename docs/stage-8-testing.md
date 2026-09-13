@@ -21,8 +21,8 @@ The current automated baseline contains 26 passing tests. The deterministic cove
 - `tests/setup.ts` installs jest-dom matchers, Web Crypto, an isolated Chromium API mock, and DOM cleanup.
 - `tests/helpers/chrome-mock.ts` mocks runtime, storage, tabs, alarms, side-panel, and downloads APIs. Download events can be emitted explicitly.
 - `tests/helpers/memory.ts` supplies deterministic key-value, prompt, and output repositories for service tests.
-- `tests/unit` covers auth state, mock authentication, API failures/retries, Zod schemas, message validation, TXT imports, queue transitions, pause/resume, retry limits, repository revisions/migrations, sequence persistence, filename sanitization, duplicate/rename behavior, supported URLs, adapter DOM helpers, React login UI, and browser download naming/status.
-- `tests/integration/automation-workflow.test.ts` exercises the required workflow: mock login, local TXT prompt import, queue creation/start, mock adapter output, output persistence, sequence-based naming, and a mocked Chromium download that reaches completion.
+- `tests/unit` covers auth state, injected API responses, API failures/retries, Zod schemas, message validation, TXT imports, queue transitions, pause/resume, retry limits, repository revisions/migrations, sequence persistence, filename sanitization, duplicate/rename behavior, supported URLs, adapter DOM helpers, React login UI, token billing, and browser download naming/status.
+- `tests/integration/automation-workflow.test.ts` exercises the local workflow: TXT prompt import, queue creation/start, deterministic adapter output, output persistence, sequence-based naming, and a simulated Chromium download that reaches completion.
 
 ## Browser mock guidance
 

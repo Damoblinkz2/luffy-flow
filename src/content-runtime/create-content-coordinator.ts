@@ -4,7 +4,7 @@ import { promptRecordSchema } from "~/schemas"
 
 import { ContentAutomationCoordinator } from "./ContentAutomationCoordinator"
 
-/** Generation-start reporting lets the background persist waiting state before output extraction. */
+/** Submission reporting lets the background debit and persist waiting state before output checks. */
 export const createContentCoordinator = (
   registry: PlatformAdapterRegistry,
   backgroundClient: TypedMessageClient,

@@ -3,34 +3,36 @@ import { createStore, type StoreApi } from "zustand/vanilla"
 import { LuffyflowError } from "~/errors/luffyflow-error"
 import type {
   CheckoutResult,
-  InvoicePlaceholder,
-  PlanId,
-  Subscription,
-  Usage,
+  PaymentGateway,
+  PurchaseRecord,
+  TokenPack,
+  TokenPackId,
+  TokenWallet,
 } from "~/schemas/billing"
-import type { SubscriptionService } from "~/services/billing/subscription-service"
+import type { TokenBillingService } from "~/services/billing/token-billing-service"
+import { createId } from "~/utils/ids"
 
-/** Billing UI state contains provider-neutral subscription, usage, and placeholder invoice data. */
+/** Billing UI state exposes prepaid tokens, purchases, and low-balance reminder preferences. */
 export interface BillingStoreState {
-  subscription: Subscription | null
-  usage: Usage | null
-  invoices: InvoicePlaceholder[]
+  wallet: TokenWallet | null
+  packs: TokenPack[]
+  purchases: PurchaseRecord[]
   loading: boolean
   error: string | null
   checkoutResult: CheckoutResult | null
   load(): Promise<void>
-  upgrade(planId: Exclude<PlanId, "free">, returnUrl: string): Promise<void>
-  changePlan(planId: PlanId): Promise<void>
-  cancel(): Promise<void>
-  incrementUsage(idempotencyKey: string): Promise<void>
+  buyTokens(packId: TokenPackId, gateway: PaymentGateway, returnUrl: string): Promise<void>
+  completePayment(paymentId: string): Promise<void>
+  updateReminder(enabled: boolean, threshold: number): Promise<void>
+  debitPrompt(promptId: string, attempt: number): Promise<void>
 }
 
-/** Billing store exposes provider-neutral actions and never handles payment details. */
-export const createBillingStore = (service: SubscriptionService): StoreApi<BillingStoreState> =>
+/** Billing store keeps payment details with hosted providers and accepts only catalog pack IDs. */
+export const createBillingStore = (service: TokenBillingService): StoreApi<BillingStoreState> =>
   createStore<BillingStoreState>()((set) => ({
-    subscription: null,
-    usage: null,
-    invoices: [],
+    wallet: null,
+    packs: [],
+    purchases: [],
     loading: false,
     error: null,
     checkoutResult: null,
@@ -39,26 +41,26 @@ export const createBillingStore = (service: SubscriptionService): StoreApi<Billi
       try {
         const snapshot = await service.load()
         set({
-          subscription: snapshot.subscription,
-          usage: snapshot.usage,
-          invoices: snapshot.invoices.items,
+          wallet: snapshot.wallet,
+          packs: snapshot.packs,
+          purchases: snapshot.purchases.items,
           loading: false,
         })
       } catch (error) {
         set({ loading: false, error: messageFromError(error) })
       }
     },
-    upgrade: async (planId, returnUrl) => {
+    buyTokens: async (packId, gateway, returnUrl) => {
       set({ loading: true, error: null, checkoutResult: null })
       try {
-        const checkoutResult = await service.checkout(planId, returnUrl)
-        const subscription = await service.changePlan(planId)
+        const checkoutResult = await service.checkout(packId, gateway, returnUrl, createId())
+        set({ checkoutResult })
+        // Hosted payments remain pending until the backend verifies the provider transaction.
         const snapshot = await service.load()
         set({
-          checkoutResult,
-          subscription,
-          usage: snapshot.usage,
-          invoices: snapshot.invoices.items,
+          wallet: snapshot.wallet,
+          packs: snapshot.packs,
+          purchases: snapshot.purchases.items,
           loading: false,
         })
       } catch (error) {
@@ -66,15 +68,15 @@ export const createBillingStore = (service: SubscriptionService): StoreApi<Billi
         throw error
       }
     },
-    changePlan: async (planId) => {
+    completePayment: async (paymentId) => {
       set({ loading: true, error: null })
       try {
-        const subscription = await service.changePlan(planId)
+        await service.verifyPayment(paymentId)
         const snapshot = await service.load()
         set({
-          subscription,
-          usage: snapshot.usage,
-          invoices: snapshot.invoices.items,
+          wallet: snapshot.wallet,
+          packs: snapshot.packs,
+          purchases: snapshot.purchases.items,
           loading: false,
         })
       } catch (error) {
@@ -82,18 +84,19 @@ export const createBillingStore = (service: SubscriptionService): StoreApi<Billi
         throw error
       }
     },
-    cancel: async () => {
+    updateReminder: async (enabled, threshold) => {
       set({ loading: true, error: null })
       try {
-        set({ subscription: await service.cancel(), loading: false })
+        const wallet = await service.updateReminder({ enabled, threshold }, createId())
+        set({ wallet, loading: false })
       } catch (error) {
         set({ loading: false, error: messageFromError(error) })
         throw error
       }
     },
-    incrementUsage: async (idempotencyKey) => {
+    debitPrompt: async (promptId, attempt) => {
       try {
-        set({ usage: await service.incrementUsage(idempotencyKey), error: null })
+        set({ wallet: await service.debitPrompt(promptId, attempt), error: null })
       } catch (error) {
         set({ error: messageFromError(error) })
         throw error

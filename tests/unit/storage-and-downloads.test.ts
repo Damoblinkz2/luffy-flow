@@ -93,4 +93,30 @@ describe("download filename generation", () => {
     expect(failed?.downloadStatus).toBe("failed")
     service.dispose()
   })
+
+  it("keeps a detected media extension and opens Chrome's folder picker when requested", async () => {
+    const outputs = new MemoryOutputRepository()
+    const original = outputFixture({
+      outputType: "audio",
+      generatedFilename: "ambient-loop.mp3",
+      fileExtension: ".wav",
+      mimeType: "audio/wav",
+      sourceUrl: "https://cdn.example.test/generated-audio?signature=temporary",
+    })
+    await outputs.createIfAbsent(original)
+    const service = new DownloadService({
+      outputs,
+      getAuthenticatedUserId: () => Promise.resolve(ids.user),
+      getMediaDownloadLocation: () => Promise.resolve("choose_folder"),
+    })
+
+    await service.request([original.id], "native")
+
+    expect(chromeControls().downloadRequests[0]).toMatchObject({
+      url: original.sourceUrl,
+      filename: "ambient-loop.wav",
+      saveAs: true,
+    })
+    service.dispose()
+  })
 })

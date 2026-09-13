@@ -34,7 +34,7 @@ Plasmo 0.90.5 does not support a separate `plasmo.config.ts`. LuffyFlow therefor
 
 Host access is limited to the documented AI platform hosts. `x.com` host access is required only for the Grok route and does not authorize content scripts on unrelated routes. Content-script match patterns in Stage 6 will narrow execution further.
 
-`https://api.example.com/*` is an optional placeholder origin. A real deployment must replace it with the actual fixed backend origin or implement an explicit optional-origin permission flow. LuffyFlow does not request `<all_urls>`.
+Local development grants `http://localhost:8787/*`. A release must replace that entry with the actual fixed HTTPS backend origin. LuffyFlow does not request `<all_urls>`.
 
 ### Strictness and quality gates
 

@@ -10,21 +10,21 @@ import { OutputLibraryPage } from "~/pages/OutputLibraryPage"
 import { OverviewPage } from "~/pages/OverviewPage"
 import { PromptHistoryPage } from "~/pages/PromptHistoryPage"
 import { SignupPage } from "~/pages/SignupPage"
-import { SubscriptionPage } from "~/pages/SubscriptionPage"
+import { TokensPage } from "~/pages/TokensPage"
 import { ProtectedRoute } from "~/routes/ProtectedRoute"
 import { useApplicationServices } from "~/components/common/ApplicationProviders"
 
 /** Billing store injection stays at the route edge rather than coupling the page to composition. */
-const SubscriptionRoute = () => {
+const TokensRoute = () => {
   const services = useApplicationServices()
-  return <SubscriptionPage store={services.billingStore} />
+  return <TokensPage store={services.billingStore} />
 }
 
 /** Hash routing keeps every dashboard route inside the installed extension document. */
 const Dashboard = () => (
   <ErrorBoundary surface="Dashboard">
     <ApplicationProviders>
-      <HashRouter>
+      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
@@ -33,7 +33,8 @@ const Dashboard = () => (
               <Route index element={<OverviewPage />} />
               <Route path="history" element={<PromptHistoryPage />} />
               <Route path="outputs" element={<OutputLibraryPage />} />
-              <Route path="subscription" element={<SubscriptionRoute />} />
+              <Route path="tokens" element={<TokensRoute />} />
+              <Route path="subscription" element={<Navigate to="/tokens" replace />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="account" element={<AccountPage />} />
             </Route>

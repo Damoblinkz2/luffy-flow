@@ -11,7 +11,7 @@ import { ProtectedRoute } from "~/routes/ProtectedRoute"
 const Options = () => (
   <ErrorBoundary surface="Options">
     <ApplicationProviders>
-      <HashRouter>
+      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />

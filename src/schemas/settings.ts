@@ -5,6 +5,8 @@ import { isoDateTimeSchema } from "./common"
 export const themePreferenceSchema = z.enum(["light", "dark", "system"])
 export const sequenceScopeSchema = z.enum(["global", "platform", "day", "session"])
 export const textExportFormatSchema = z.enum(["txt", "md", "json", "csv"])
+/** Chrome can use its Downloads folder or show its secure folder picker for each media file. */
+export const mediaDownloadLocationSchema = z.enum(["default", "choose_folder"])
 
 /** Selector overrides are ordered fallbacks and never executable code. */
 export const selectorOverridesSchema = z.record(
@@ -38,9 +40,10 @@ export const luffyflowSettingsSchema = z.object({
   sequenceScope: sequenceScopeSchema,
   autoSaveOutputs: z.boolean(),
   autoDownloadOutputs: z.boolean(),
+  // Defaults preserve existing installations while allowing people to opt in to
+  // Chrome's Save As picker for image, video, audio, and file downloads.
+  mediaDownloadLocation: mediaDownloadLocationSchema.default("default"),
   theme: themePreferenceSchema,
-  useMockApi: z.boolean(),
-  backendBaseUrl: z.string().url().max(2_048),
   debugLogging: z.boolean(),
   privacyMode: z.boolean(),
   platformAdapters: z.object({
@@ -55,6 +58,7 @@ export const luffyflowSettingsSchema = z.object({
 export type ThemePreference = z.infer<typeof themePreferenceSchema>
 export type SequenceScope = z.infer<typeof sequenceScopeSchema>
 export type TextExportFormat = z.infer<typeof textExportFormatSchema>
+export type MediaDownloadLocation = z.infer<typeof mediaDownloadLocationSchema>
 export type PlatformAdapterSettings = z.infer<typeof platformAdapterSettingsSchema>
 export type LuffyflowSettingsInput = z.input<typeof luffyflowSettingsSchema>
 export type LuffyflowSettings = z.infer<typeof luffyflowSettingsSchema>

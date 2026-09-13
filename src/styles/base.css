@@ -5,26 +5,26 @@
 @layer base {
   :root {
     color-scheme: light;
-    --color-background: 246 248 252;
-    --color-foreground: 20 27 45;
+    --color-background: 247 247 241;
+    --color-foreground: 20 35 28;
     --color-surface: 255 255 255;
-    --color-border: 211 218 231;
-    --color-primary: 79 70 229;
+    --color-border: 217 221 213;
+    --color-primary: 25 91 67;
     --color-primary-foreground: 255 255 255;
-    --color-danger: 190 24 93;
+    --color-danger: 132 45 32;
     --color-danger-foreground: 255 255 255;
   }
 
   .dark {
     color-scheme: dark;
-    --color-background: 13 18 31;
-    --color-foreground: 229 234 245;
-    --color-surface: 24 31 49;
-    --color-border: 61 72 99;
-    --color-primary: 129 140 248;
-    --color-primary-foreground: 15 23 42;
-    --color-danger: 251 113 133;
-    --color-danger-foreground: 40 8 18;
+    --color-background: 16 42 32;
+    --color-foreground: 247 247 241;
+    --color-surface: 23 51 40;
+    --color-border: 49 87 70;
+    --color-primary: 216 239 117;
+    --color-primary-foreground: 16 42 32;
+    --color-danger: 255 171 159;
+    --color-danger-foreground: 65 19 12;
   }
 
   * {

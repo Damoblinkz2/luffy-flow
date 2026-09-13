@@ -4,14 +4,14 @@ import { useStore } from "zustand"
 import { AutomationWorkspace } from "~/components/automation"
 import { useApplicationServices } from "~/components/common/ApplicationProviders"
 
-/** Overview combines current usage/record counts with the full dashboard automation workspace. */
+/** Overview combines token and record counts with the full dashboard automation workspace. */
 export const OverviewPage = () => {
   const services = useApplicationServices()
   const billing = useStore(services.billingStore, (state) => state)
   const [counts, setCounts] = useState({ prompts: 0, outputs: 0 })
 
   useEffect(() => {
-    if (services.billingStore.getState().subscription === null)
+    if (services.billingStore.getState().wallet === null)
       void services.billingStore.getState().load()
     let active = true
     void Promise.all([
@@ -55,9 +55,9 @@ export const OverviewPage = () => {
           <p className="text-2xl font-semibold">{counts.outputs.toLocaleString()}</p>
         </article>
         <article className="af-card">
-          <p className="af-muted">Monthly usage</p>
+          <p className="af-muted">Token balance</p>
           <p className="text-2xl font-semibold">
-            {billing.usage === null ? "—" : `${billing.usage.used}/${billing.usage.limit}`}
+            {billing.wallet === null ? "—" : billing.wallet.balance.toLocaleString()}
           </p>
         </article>
       </section>

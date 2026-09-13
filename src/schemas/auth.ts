@@ -7,6 +7,9 @@ export const userSchema = z.object({
   id: entityIdSchema,
   email: z.string().email().max(320),
   displayName: z.string().trim().min(1).max(100),
+  role: z.enum(["owner", "admin", "support", "user"]),
+  status: z.enum(["active", "suspended"]),
+  emailVerified: z.boolean(),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
 })
@@ -25,7 +28,7 @@ export const authSessionSchema = z.object({
   restoredAt: isoDateTimeSchema.optional(),
 })
 
-/** Mock forms enforce a production-shaped password policy without persisting the value. */
+/** Authentication forms enforce the same password policy as the production API. */
 export const passwordSchema = z
   .string()
   .min(8)
@@ -50,6 +53,13 @@ export const authResponseSchema = z.object({
   tokens: authTokensSchema,
 })
 
+/** Signup creates an inactive account until the address link is opened. */
+export const signupResponseSchema = z.object({
+  verificationRequired: z.literal(true),
+  email: z.string().email().max(320),
+  developmentVerificationUrl: z.string().url().optional(),
+})
+
 export const refreshTokenRequestSchema = z.object({
   refreshToken: z.string().min(1).max(16_384),
 })
@@ -66,5 +76,6 @@ export type AuthSession = z.infer<typeof authSessionSchema>
 export type LoginRequest = z.infer<typeof loginRequestSchema>
 export type SignupRequest = z.infer<typeof signupRequestSchema>
 export type AuthResponse = z.infer<typeof authResponseSchema>
+export type SignupResponse = z.infer<typeof signupResponseSchema>
 export type RefreshTokenRequest = z.infer<typeof refreshTokenRequestSchema>
 export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>

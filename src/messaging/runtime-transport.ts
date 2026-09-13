@@ -54,7 +54,11 @@ export const listenForRuntimeMessages = (handler: IncomingMessageHandler): (() =
     sendResponse: (response?: unknown) => void,
   ): true => {
     void handler(message, sender).then(
-      (response) => sendResponse(response),
+      (response) => {
+        // Only the router addressed by the message responds. Returning a
+        // response from another extension context races the real recipient.
+        if (response !== undefined) sendResponse(response)
+      },
       () => sendResponse(undefined),
     )
     return true

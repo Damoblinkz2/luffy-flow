@@ -1,13 +1,13 @@
 import { NavLink, Outlet } from "react-router-dom"
 
 import { useAuthStore } from "~/components/auth/AuthProvider"
-import { Button } from "~/components/common"
+import { BrandLogo, Button } from "~/components/common"
 
 const NAVIGATION = [
   ["/", "Overview"],
   ["/history", "Prompt history"],
   ["/outputs", "Output library"],
-  ["/subscription", "Subscription"],
+  ["/tokens", "Tokens"],
   ["/settings", "Settings"],
   ["/account", "Account"],
 ] as const
@@ -20,7 +20,7 @@ export const DashboardLayout = () => {
     <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
       <aside className="border-b bg-surface p-4 md:min-h-screen md:border-b-0 md:border-r">
         <div className="mb-5">
-          <p className="text-xl font-bold text-primary">LuffyFlow</p>
+          <BrandLogo className="text-xl text-primary" />
           <p className="text-xs text-foreground/60">Prompt automation workspace</p>
         </div>
         <nav className="flex gap-1 overflow-x-auto md:flex-col" aria-label="Dashboard sections">

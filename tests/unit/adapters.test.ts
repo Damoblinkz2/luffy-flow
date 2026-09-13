@@ -11,13 +11,24 @@ import { detectMediaOutput, detectTextOutput } from "~/adapters/shared/output-ex
 
 describe("supported platform URLs", () => {
   it.each([
-    [new GoogleFlowAdapter(), "https://flow.google/", "https://flow.google.evil.example/"],
+    [
+      new GoogleFlowAdapter(),
+      "https://flow.google/projects/example-session",
+      "https://flow.google.evil.example/projects/example-session",
+    ],
     [new GeminiAdapter(), "https://gemini.google.com/app/abc", "http://gemini.google.com/app"],
     [new GrokAdapter(), "https://x.com/i/grok", "https://x.com/home"],
     [new MetaAiAdapter(), "https://meta.ai/", "https://meta.ai.evil.example/"],
   ])("allows only explicit official routes", (adapter, allowed, denied) => {
     expect(adapter.isSupportedUrl(new URL(allowed))).toBe(true)
     expect(adapter.isSupportedUrl(new URL(denied))).toBe(false)
+    adapter.dispose()
+  })
+
+  it("recognizes the current localized Google Labs Flow route", () => {
+    const adapter = new GoogleFlowAdapter()
+    expect(adapter.isSupportedUrl(new URL("https://www.labs.google/fx/ko/tools/flow"))).toBe(true)
+    expect(adapter.isSupportedUrl(new URL("https://www.labs.google/fx/ko/tools/other"))).toBe(false)
     adapter.dispose()
   })
 
@@ -86,6 +97,15 @@ describe("adapter DOM utilities", () => {
       sourceUrl: "https://cdn.example.test/image.png",
       fileExtension: ".png",
       mimeType: "image/png",
+    })
+
+    const signedAudioRoot = document.createElement("section")
+    signedAudioRoot.innerHTML =
+      '<audio src="https://cdn.example.test/generated?signature=short-lived"><source type="audio/wav"></audio>'
+    expect(detectMediaOutput(signedAudioRoot)).toMatchObject({
+      type: "audio",
+      fileExtension: ".wav",
+      mimeType: "audio/wav",
     })
   })
 })

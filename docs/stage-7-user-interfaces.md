@@ -6,12 +6,12 @@ loading states. Stage 8 tests have not started.
 
 ## Extension surfaces
 
-- `src/popup.tsx` shows authentication, mock plan and usage, active-tab support, current-session
+- `src/popup.tsx` shows authentication, token balance, active-tab support, current-session
   prompt/output counts, workspace access, logout, and dashboard/history/output/settings shortcuts.
 - `src/sidepanel.tsx` hosts the authenticated platform workspace. The manifest explicitly registers
   `sidepanel.html` as the default Chromium side panel.
 - `src/tabs/dashboard.tsx` uses extension-safe hash routing for Overview, Prompt history, Output
-  library, Subscription, Settings, Account, Login, and Sign-up.
+  library, Tokens, Settings, Account, Login, and Sign-up.
 - `src/options.tsx` reuses the validated settings surface behind authentication.
 - Browsers without `chrome.sidePanel` can mount `InPagePanelFallback` in a closed Shadow DOM. The
   content entry loads the fallback only when that API namespace is unavailable. Chrome documents
@@ -81,7 +81,7 @@ confirmed deletion, retry, and JSON/CSV export.
 ## Settings, account, and diagnostics
 
 The React Hook Form/Zod settings screen includes all requested defaults, naming tokens, sequence
-scope/padding, automatic-save/download preferences, theme, mock mode, backend URL, logging/privacy,
+scope/padding, automatic-save/download preferences, theme, logging/privacy,
 adapter enable/timeouts, and advanced selector overrides.
 
 Selector overrides are runtime-schema validated, limited to known selector groups, converted only
@@ -93,8 +93,8 @@ not return selector values, DOM text, prompts, outputs, URL query strings, or ha
 
 The settings page also exports the authenticated user's local records/settings and provides a
 confirmed clear-data action. Clearing is refused while a queue is active and closes IndexedDB before
-deletion. The account page identifies mock authentication honestly, supports logout, and keeps
-remote account deletion as a non-destructive placeholder.
+deletion. The account page reports API-backed session status and supports logout. Account deletion
+must be implemented as a backend-owned authenticated workflow before it is offered in the UI.
 
 ## Important files added
 
@@ -140,5 +140,5 @@ status forwarding, applies stored selector overrides, and wires background downl
 - `autoDownloadOutputs` and `autoSaveOutputs` are persisted configuration controls; automatic
   post-capture policy is not activated in Stage 7. Existing capture behavior and manual downloads
   work independently of these two preferences.
-- Backend URL/mock-mode changes take effect when a new service graph is created after reload and
-  still require matching optional host permission for a real backend.
+- Backend URL changes require a rebuild because public environment variables are embedded in the
+  bundle, and the selected origin must have a matching manifest host permission.

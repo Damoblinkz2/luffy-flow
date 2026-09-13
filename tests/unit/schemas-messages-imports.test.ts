@@ -58,8 +58,6 @@ describe("runtime schemas and messages", () => {
       autoSaveOutputs: true,
       autoDownloadOutputs: false,
       theme: "system",
-      useMockApi: true,
-      backendBaseUrl: "https://api.example.com",
       debugLogging: false,
       privacyMode: true,
       platformAdapters: {

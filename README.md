@@ -24,8 +24,8 @@ LuffyFlow is at version `0.1.0`. It has a passing production build and automated
 - Prevents duplicate output records with stable fingerprints.
 - Generates safe sequence-based filenames and validates user renames.
 - Downloads text as TXT, Markdown, JSON, or CSV and bundles multiple text outputs into ZIP files.
-- Provides a popup, side panel, dashboard tab, options page, account/subscription placeholders, and adapter diagnostics.
-- Includes a development mock API for authentication, plans, billing placeholders, and usage limits.
+- Provides a popup, side panel, dashboard tab, options page, account/token-wallet controls, and adapter diagnostics.
+- Uses the LuffyFlow backend API for authentication, prepaid token billing, purchase history, and low-balance reminder settings.
 
 LuffyFlow does not bypass authentication, CAPTCHAs, rate limits, paywalls, or platform access controls. It automates only visible user-interface elements in a page the user can already access.
 
@@ -35,13 +35,13 @@ LuffyFlow does not bypass authentication, CAPTCHAs, rate limits, paywalls, or pl
 | ----------------------------------------- | ------------------------------------------------------------------ |
 | Strict TypeScript                         | Passing                                                            |
 | ESLint and Prettier                       | Passing                                                            |
-| Automated tests                           | 29 passing tests across 8 files                                    |
+| Automated tests                           | Run `pnpm test` for the current result                             |
 | Production browser smoke tests            | 3 passing Playwright tests in isolated Chrome for Testing          |
 | Deterministic-core coverage               | 93.44% statements, 85.52% branches, 95.23% functions, 93.69% lines |
 | Chrome MV3 production build               | Passing                                                            |
 | Live authenticated adapter verification   | Pending                                                            |
 | Least-privilege generated manifest review | Passing; no generated `<all_urls>` content scripts                 |
-| Production backend and billing            | Not implemented; mock mode only by default                         |
+| Production backend and billing            | Implemented and connected; deployment configuration remains        |
 | Chrome Web Store readiness                | Pending                                                            |
 
 The generated manifest contains one narrowly matched platform content script. Shared coordinator modules live outside Plasmo's reserved `src/contents` entry directory so they are bundled as dependencies rather than registered independently.
@@ -118,36 +118,25 @@ Do not publish a package solely because the automated command passes. Live platf
 
 ## Configuration
 
-| Variable                              | Default                   | Purpose                                                           |
-| ------------------------------------- | ------------------------- | ----------------------------------------------------------------- |
-| `PLASMO_PUBLIC_API_BASE_URL`          | `https://api.example.com` | Fixed base URL for real HTTP mode. Remote origins must use HTTPS. |
-| `PLASMO_PUBLIC_USE_MOCK_API`          | `true`                    | Uses the local development mock API when enabled.                 |
-| `PLASMO_PUBLIC_APP_ENV`               | `development`             | Selects development, test, or production behavior.                |
-| `PLASMO_PUBLIC_MOCK_API_LATENCY_MS`   | `500`                     | Adds bounded mock latency for realistic UI behavior.              |
-| `PLASMO_PUBLIC_MOCK_API_FAILURE_RATE` | `0`                       | Simulates mock failures from `0` to `1`.                          |
-| `PLASMO_PUBLIC_API_TIMEOUT_MS`        | `15000`                   | Default bounded API request timeout.                              |
+| Variable                       | Default                        | Purpose                                                  |
+| ------------------------------ | ------------------------------ | -------------------------------------------------------- |
+| `PLASMO_PUBLIC_API_BASE_URL`   | `http://localhost:8787/api/v1` | Fixed backend API URL; production values must use HTTPS. |
+| `PLASMO_PUBLIC_APP_ENV`        | `development`                  | Selects development, test, or production validation.     |
+| `PLASMO_PUBLIC_API_TIMEOUT_MS` | `15000`                        | Default bounded API request timeout.                     |
 
 For a production backend build:
 
-- Set `PLASMO_PUBLIC_USE_MOCK_API=false`.
 - Set `PLASMO_PUBLIC_APP_ENV=production`.
-- Replace `https://api.example.com` with the real HTTPS API origin.
+- Set `PLASMO_PUBLIC_API_BASE_URL` to the deployed HTTPS API URL, including `/api/v1`.
 - Add the exact API origin to the production manifest permissions.
-- Implement and validate the documented auth, billing, usage, and idempotency contracts.
-- Rebuild after environment changes; changing the settings UI alone does not grant new host permissions or recreate the active service graph until reload.
+- Configure the backend's production database, secrets, payment webhooks, SMTP, CORS origin, and public base URL.
+- Rebuild after environment changes; API configuration is compiled into the extension bundle.
 
 ## Using LuffyFlow
 
 ### 1. Sign in
 
-Development mock mode seeds this account:
-
-```text
-Email: demo@luffyflow.local
-Password: Demo123!
-```
-
-These credentials and mock tokens are development fixtures, not production authentication.
+Create an account against the configured backend and sign in with those credentials. No seeded development account is shipped.
 
 ### 2. Open a supported page
 
@@ -202,7 +191,7 @@ Text outputs can be exported as TXT, Markdown, JSON, or CSV. Multiple text recor
 
 - **Popup:** account summary, active-platform detection, and quick navigation.
 - **Side panel:** in-context queue workspace on supported browsers.
-- **Dashboard:** overview, prompt history, outputs, subscription placeholder, settings, and account pages.
+- **Dashboard:** overview, prompt history, outputs, token purchases/reminders, settings, and account pages.
 - **Options page:** authenticated settings surface.
 - **In-page fallback:** closed Shadow DOM workspace for browsers without the side-panel API.
 
@@ -218,7 +207,7 @@ flowchart LR
   ADAPTER --> PAGE[Visible authenticated platform UI]
   ADAPTER -->|Detected output| BG
   BG --> DOWNLOADS[Chromium downloads API]
-  UI --> API[Mock or HTTPS API client]
+  UI --> API[HTTPS backend API client]
 ```
 
 Important boundaries:
@@ -228,29 +217,29 @@ Important boundaries:
 - The background worker is the authority for queue transitions, usage authorization, output capture, and downloads.
 - Content code owns DOM interaction and platform adapter lifecycles.
 - Platform-specific selectors are isolated from shared queue and persistence logic.
-- IndexedDB stores prompts and outputs; small versioned namespaces store settings, sessions, mock API state, queue coordination, and sequence counters.
+- IndexedDB stores prompts and outputs; small versioned namespaces store settings, authenticated sessions, queue coordination, and sequence counters.
 
 See [architecture.md](docs/architecture.md) for the detailed design and staged documents under `docs/` for implementation history.
 
 ## Permissions
 
-| Permission  | Why LuffyFlow uses it                                                          |
-| ----------- | ------------------------------------------------------------------------------ |
-| `storage`   | Sessions, settings, mock API data, durable queue state, and sequence counters. |
-| `downloads` | User-requested output exports and media downloads.                             |
-| `tabs`      | Active-tab detection and background-to-content coordination.                   |
-| `sidePanel` | Preferred in-context workspace.                                                |
-| `alarms`    | Worker-safe maintenance and recovery hints.                                    |
+| Permission  | Why LuffyFlow uses it                                           |
+| ----------- | --------------------------------------------------------------- |
+| `storage`   | Sessions, settings, durable queue state, and sequence counters. |
+| `downloads` | User-requested output exports and media downloads.              |
+| `tabs`      | Active-tab detection and background-to-content coordination.    |
+| `sidePanel` | Preferred in-context workspace.                                 |
+| `alarms`    | Worker-safe maintenance and recovery hints.                     |
 
-Declared host permissions cover only the documented Google Flow, Gemini, Grok, Meta AI, and X hosts. The example backend origin is optional. The generated manifest contains no `<all_urls>` content-script entries.
+Declared host permissions cover only the documented Google Flow, Gemini, Grok, Meta AI, and X hosts plus the local development API. Replace the local API permission with the deployed HTTPS origin for release. The generated manifest contains no `<all_urls>` content-script entries.
 
 Incognito mode is disabled.
 
 ## Security and privacy
 
 - Prompt files are read locally and are not uploaded by the import service.
-- Passwords are transient form/API request values. The mock API persists only a salted development verifier.
-- Mock server sessions store token hashes; client session tokens remain local bearer credentials.
+- Passwords are transient form/API request values. The backend stores password hashes, never plaintext passwords.
+- The backend stores refresh-token hashes; client bearer credentials remain in extension-local storage.
 - Structured logs redact passwords, tokens, authorization headers, cookies, and prompt/output content when privacy mode is enabled.
 - API requests use a validated fixed origin; non-local production traffic requires HTTPS.
 - Downloads accept only validated local data URLs or accessible HTTP(S) media URLs.
@@ -278,11 +267,11 @@ corepack pnpm run validate:release
 corepack pnpm run validate:stage10
 ```
 
-The tests include browser API mocks and an integration-style workflow covering mock login, TXT import, queue execution, mock output capture, persistent sequence naming, and download completion.
+The tests use isolated browser and API test doubles and cover authentication, TXT import, queue execution, output capture, persistent sequence naming, token billing, and download completion. Test doubles are not bundled into production code.
 
 Coverage percentages apply to deterministic, platform-independent invariants: filename/output naming, queue-state transitions, and versioned storage. They do not claim live Chromium or live AI-platform end-to-end coverage.
 
-The Playwright suite loads the production extension into an isolated Chrome for Testing profile and checks manifest assets, signed-out surfaces, mock login, and cross-surface session restoration. It does not reuse personal browser data or claim authenticated live-platform coverage. Follow [Stage 10 browser validation](docs/stage-10-browser-validation.md) for live adapter evidence.
+The Playwright suite loads the production extension into an isolated Chrome for Testing profile and checks manifest assets, signed-out surfaces, and the absence of seeded credentials or obsolete storage. It does not reuse personal browser data or claim authenticated live-platform coverage. Follow [Stage 10 browser validation](docs/stage-10-browser-validation.md) for live adapter evidence.
 
 ## Data and recovery behavior
 
@@ -315,9 +304,9 @@ Review the interrupted prompt and current platform state. Retry explicitly only 
 
 For media, revisit the original platform page so its signed URL is current. Large text or ZIP exports use generated data URLs and may reach browser memory/URL limits. Retry from the output library after confirming storage and download permissions.
 
-### Backend settings do not take effect
+### Backend configuration does not take effect
 
-Reload the extension surface after changing backend/mock settings. A different remote origin also needs an exact manifest host permission and usually requires a rebuild.
+Rebuild and reload the extension after changing `PLASMO_PUBLIC_API_BASE_URL`. A different origin also needs an exact manifest host permission.
 
 ### The production build fails during PostCSS loading
 
@@ -326,7 +315,8 @@ Keep the Parcel-compatible `.postcssrc.json` file. This Plasmo/Parcel toolchain 
 ## Known limitations
 
 - Google Flow, Gemini, Grok, and Meta AI selectors have not been validated against authenticated live pages in this environment.
-- Authentication, billing, subscription, invoices, and usage limits are development mocks by default.
+- Authentication and prepaid token billing require a reachable LuffyFlow backend. Payment completion and reminder mail also require correctly configured provider webhooks and SMTP.
+- Prompt, output, and settings records remain local to the browser; multi-device sync is not currently claimed.
 - Automatic save/download settings are persisted but are not yet a complete unattended output pipeline.
 - Browser download-ID tracking is in memory and can be lost when the background worker is suspended.
 - Large text and ZIP exports use data URLs rather than a streaming/offscreen-document pipeline.
@@ -340,7 +330,7 @@ Automated build quality is green, but public release remains blocked by:
 
 1. Validating every platform adapter on authenticated live pages.
 2. Reviewing each platform's terms and obtaining any required permission for automation.
-3. Implementing and security-reviewing the production backend, authentication, billing, and usage enforcement—or removing those product claims.
+3. Deploying and security-reviewing the backend, authentication, token billing, reminders, and usage enforcement.
 4. Publishing privacy, support, retention, and account-deletion policies.
 5. Completing accessibility, upgrade/migration, worker-suspension, and cross-browser smoke tests.
 6. Choosing a license and preparing signed store artifacts and listing assets.
@@ -353,7 +343,7 @@ Use [docs/production-checklist.md](docs/production-checklist.md) as the release 
 assets/                         Extension icon source
 docs/                           Architecture, stage notes, and release checklist
 src/adapters/                   Platform contracts, selectors, and DOM automation
-src/api/                        Typed API client, HTTP transport, and mock routes
+src/api/                        Typed API clients and the HTTP transport
 src/background/                 Queue orchestration and MV3 worker runtime
 src/components/                 Reusable React UI
 src/content-runtime/            Shared content coordination and message handlers

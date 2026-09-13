@@ -33,7 +33,7 @@ const config = {
        * visually consistent while respecting reduced-motion styles in CSS.
        */
       boxShadow: {
-        panel: "0 16px 40px rgb(15 23 42 / 0.18)",
+        panel: "0 16px 40px rgb(20 35 28 / 0.18)",
       },
       transitionDuration: {
         fast: "150ms",

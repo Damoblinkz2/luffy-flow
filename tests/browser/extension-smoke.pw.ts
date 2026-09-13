@@ -4,6 +4,7 @@ import path from "node:path"
 
 const extensionPath = path.resolve("build/chrome-mv3-prod")
 const manifestPath = path.join(extensionPath, "manifest.json")
+const liveApiUrl = "http://localhost:8787/api/v1"
 
 let context: BrowserContext
 let extensionId: string
@@ -77,22 +78,122 @@ test("signed-out popup, side panel, dashboard, and options surfaces render witho
   await Promise.all([popup.close(), sidePanel.close(), dashboard.close(), options.close()])
 })
 
-test("mock login persists across dashboard, popup, side panel, and options", async () => {
+test("supported AI pages receive the in-page LuffyFlow launcher", async () => {
+  const page = await context.newPage()
+  // Fulfilling a supported origin locally keeps the test deterministic while still
+  // exercising the browser's real content-script match and Shadow-DOM mount path.
+  await page.route("https://flow.google/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>Google Flow test</title>",
+    }),
+  )
+  await page.route("https://gemini.google.com/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Gemini test</title>" }),
+  )
+  // Google Flow uses client-side project routes rather than only its root URL.
+  // This assertion protects recognition of the actual project workspace route.
+  await page.goto("https://flow.google/projects/browser-test")
+  const flowLauncher = page.locator("#luffyflow-in-page-panel-host")
+  await expect(flowLauncher).toHaveCount(1)
+  await expect(flowLauncher.getByRole("button", { name: "Open LuffyFlow" })).toBeVisible()
+  await page.goto("https://gemini.google.com/app")
+  const launcher = page.locator("#luffyflow-in-page-panel-host")
+  await expect(launcher).toHaveCount(1)
+  // The launcher must not cover the AI page. Clicking it delegates to Chrome's
+  // native, user-resizable side panel and reports the successful handoff.
+  await expect(launcher.getByRole("button", { name: "Open LuffyFlow" })).toBeVisible()
+  await launcher.getByRole("button", { name: "Open LuffyFlow" }).click()
+  await expect(launcher.getByRole("status")).toContainText("browser side panel")
+  await expect(launcher.getByText(/Something went wrong/i)).toHaveCount(0)
+  await page.close()
+})
+
+test("production login surface contains no seeded account or legacy mock state", async () => {
   const dashboard = await openSurface("tabs/dashboard.html#/login", "Welcome to LuffyFlow")
-  await dashboard.getByRole("button", { name: "Use demo account" }).click()
-  await expect(dashboard.locator("#login-email")).toHaveValue("demo@luffyflow.local")
-  await dashboard.getByRole("button", { name: "Log in", exact: true }).click()
-  await expect(dashboard.getByRole("heading", { name: "Overview" })).toBeVisible()
+  await expect(dashboard.getByRole("button", { name: "Use demo account" })).toHaveCount(0)
+  await expect(dashboard.getByText(/demo@luffyflow\.local/i)).toHaveCount(0)
+  const legacyState = await dashboard.evaluate(
+    () =>
+      new Promise<Record<string, unknown>>((resolve) => {
+        chrome.storage.local.get(
+          ["luffyflow:auth", "luffyflow:mock-api", "luffyflow:mock-api-v2"],
+          (values) => resolve(values),
+        )
+      }),
+  )
+  expect(legacyState).toEqual({})
+  await dashboard.close()
+})
 
-  const popup = await openSurface("popup.html", "LuffyFlow Demo")
-  const sidePanel = await openSurface("sidepanel.html", "Platform workspace")
-  const options = await openSurface("options.html", "Settings")
+test("development and production builds can reach the configured local API", async () => {
+  test.setTimeout(120_000)
+  test.skip(
+    process.env.LUFFYFLOW_LIVE_API_TEST !== "1",
+    "Set LUFFYFLOW_LIVE_API_TEST=1 while the local backend is running.",
+  )
 
-  await expect(popup.getByText("Logged in")).toBeVisible()
-  await expect(sidePanel.getByText("Add prompts")).toBeVisible()
-  await expect(options.getByRole("heading", { name: "Settings" })).toBeVisible()
+  for (const buildName of ["chrome-mv3-dev", "chrome-mv3-prod"]) {
+    const buildPath = path.resolve("build", buildName)
+    expect(existsSync(path.join(buildPath, "manifest.json"))).toBe(true)
+    const liveContext = await chromium.launchPersistentContext("", {
+      channel: "chromium",
+      headless: true,
+      args: [`--disable-extensions-except=${buildPath}`, `--load-extension=${buildPath}`],
+    })
 
-  await Promise.all([popup.close(), sidePanel.close(), options.close(), dashboard.close()])
+    try {
+      // Discover the real ID assigned to this folder, then issue a browser CORS
+      // request from the extension origin using the same header as ApiClient.
+      let worker = liveContext.serviceWorkers()[0]
+      worker ??= await liveContext.waitForEvent("serviceworker")
+      const liveExtensionId = new URL(worker.url()).host
+      const page = await liveContext.newPage()
+      await page.goto(`chrome-extension://${liveExtensionId}/popup.html`)
+      const result = await page.evaluate(async (baseUrl) => {
+        try {
+          const response = await fetch(`${baseUrl}/billing/token-packs`, {
+            headers: { "X-Request-Id": crypto.randomUUID() },
+          })
+          const body = (await response.json()) as { items?: unknown[] }
+          // An empty signup is intentionally rejected after reaching Fastify;
+          // HTTP 400 proves the POST preflight passed without creating an account.
+          const signupResponse = await fetch(`${baseUrl}/auth/signup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Request-Id": crypto.randomUUID(),
+            },
+            body: "{}",
+          })
+          return {
+            status: response.status,
+            signupValidationStatus: signupResponse.status,
+            itemCount: Array.isArray(body.items) ? body.items.length : -1,
+            networkError: null,
+          }
+        } catch (error) {
+          return {
+            status: 0,
+            signupValidationStatus: 0,
+            itemCount: -1,
+            networkError: String(error),
+          }
+        }
+      }, liveApiUrl)
+
+      expect(result, `${buildName}: ${result.networkError ?? "unexpected response"}`).toMatchObject(
+        {
+          status: 200,
+          signupValidationStatus: 400,
+          itemCount: 3,
+          networkError: null,
+        },
+      )
+    } finally {
+      await liveContext.close()
+    }
+  }
 })
 
 /** Opens an extension page, waits for its expected content, and fails on uncaught browser errors. */

@@ -62,7 +62,7 @@ export class TypedMessageRouter {
   async route(
     rawMessage: unknown,
     sender: chrome.runtime.MessageSender,
-  ): Promise<MessageResponse<unknown>> {
+  ): Promise<MessageResponse<unknown> | undefined> {
     const parsed = extensionMessageSchema.safeParse(rawMessage)
     if (!parsed.success) {
       const correlationId = createCorrelationId()
@@ -79,6 +79,10 @@ export class TypedMessageRouter {
     }
 
     const message = parsed.data
+    // runtime.sendMessage broadcasts to extension contexts. A router that is
+    // not the intended recipient must not answer, otherwise its error response
+    // can win the race against the component the sender actually addressed.
+    if (message.target !== this.target) return undefined
     if (!this.isSenderConsistent(message.source, sender)) {
       return this.failure(
         message.correlationId,
@@ -90,18 +94,6 @@ export class TypedMessageRouter {
         }),
       )
     }
-    if (message.target !== this.target) {
-      return this.failure(
-        message.correlationId,
-        new LuffyflowError({
-          code: "MESSAGE_WRONG_TARGET",
-          category: "authorization",
-          userMessage: "The extension message was sent to the wrong component.",
-          correlationId: message.correlationId,
-        }),
-      )
-    }
-
     const registration = this.handlers.get(message.kind)
     if (registration === undefined) {
       return this.failure(

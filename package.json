@@ -95,10 +95,8 @@
       "https://www.grok.com/*",
       "https://meta.ai/*",
       "https://www.meta.ai/*",
-      "https://x.com/*"
-    ],
-    "optional_host_permissions": [
-      "https://api.example.com/*"
+      "https://x.com/*",
+      "http://localhost:8787/*"
     ],
     "content_security_policy": {
       "extension_pages": "script-src 'self'; object-src 'self';"

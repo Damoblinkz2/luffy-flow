@@ -1,9 +1,7 @@
 /** Namespaced keys prevent unrelated data from being cleared or migrated accidentally. */
 export const STORAGE_KEYS = {
-  authentication: "luffyflow:auth",
+  authentication: "luffyflow:auth-v2",
   userProfile: "luffyflow:user-profile",
-  subscription: "luffyflow:subscription",
-  usage: "luffyflow:usage",
   settings: "luffyflow:settings",
   promptRecords: "luffyflow:prompts",
   outputRecords: "luffyflow:outputs",
@@ -11,7 +9,6 @@ export const STORAGE_KEYS = {
   sequenceCounters: "luffyflow:sequences",
   sessions: "luffyflow:sessions",
   syncMetadata: "luffyflow:sync-metadata",
-  mockApiState: "luffyflow:mock-api",
 } as const
 
 export type StorageNamespaceName = keyof typeof STORAGE_KEYS

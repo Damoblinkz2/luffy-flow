@@ -88,6 +88,22 @@ export class ApiClient implements TypedApiClient {
         )
         return parsed.data
       } catch (error) {
+        if (!(error instanceof LuffyflowError)) {
+          // Unexpected pre-fetch/runtime failures need a safe diagnostic trail;
+          // request bodies and credentials are deliberately excluded.
+          this.options.logger.error(
+            "API request failed before a valid response was received.",
+            {
+              method: request.method,
+              path: request.path,
+              error:
+                error instanceof Error
+                  ? { name: error.name, message: error.message }
+                  : { value: String(error) },
+            },
+            { correlationId },
+          )
+        }
         const normalized = this.normalizeRequestError(
           error,
           request,
@@ -127,7 +143,9 @@ export class ApiClient implements TypedApiClient {
   ): Promise<TransportRequest> {
     const headers: Record<string, string> = {
       Accept: "application/json",
-      "X-Correlation-ID": correlationId,
+      // Fastify exposes this conventional request ID to logs and explicitly
+      // allows it through the extension-origin CORS preflight policy.
+      "X-Request-Id": correlationId,
       ...request.headers,
     }
 
@@ -154,7 +172,10 @@ export class ApiClient implements TypedApiClient {
     path: string,
     query?: Record<string, string | number | boolean | undefined>,
   ): string {
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`
+    // API modules use leading slashes for readability, but URL treats them as
+    // origin-rooted paths. Removing only those slashes preserves `/api/v1` in
+    // the configured base URL while the origin check below blocks absolute URLs.
+    const normalizedPath = path.replace(/^\/+/, "")
     const url = new URL(normalizedPath, `${this.options.baseUrl.replace(/\/+$/, "")}/`)
     if (url.origin !== new URL(this.options.baseUrl).origin) {
       throw new LuffyflowError({
@@ -188,7 +209,13 @@ export class ApiClient implements TypedApiClient {
   private createResponseError(response: TransportResponse, correlationId: string): LuffyflowError {
     const parsedBody = (() => {
       try {
-        return apiErrorBodySchema.safeParse(JSON.parse(response.bodyText) as unknown)
+        const decoded = JSON.parse(response.bodyText) as unknown
+        // Accept the backend envelope and a direct body for standards-compatible test transports.
+        const candidate =
+          typeof decoded === "object" && decoded !== null && "error" in decoded
+            ? decoded.error
+            : decoded
+        return apiErrorBodySchema.safeParse(candidate)
       } catch {
         return apiErrorBodySchema.safeParse(undefined)
       }
@@ -216,9 +243,10 @@ export class ApiClient implements TypedApiClient {
 
   private categoryForStatus(
     status: number,
-  ): "authentication" | "authorization" | "network" | "unknown" {
+  ): "authentication" | "authorization" | "usage_limit" | "network" | "unknown" {
     if (status === 401) return "authentication"
     if (status === 403) return "authorization"
+    if (status === 402) return "usage_limit"
     if (status === 408 || status === 429 || status >= 500) return "network"
     return "unknown"
   }

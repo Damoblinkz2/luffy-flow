@@ -4,7 +4,6 @@ import * as z from "zod/v3"
 export const errorCategorySchema = z.enum([
   "authentication",
   "authorization",
-  "subscription",
   "usage_limit",
   "network",
   "timeout",

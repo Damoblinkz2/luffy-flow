@@ -30,7 +30,7 @@ The API client receives its transport, logger, token provider, and random source
 - Mutation retry only when the caller explicitly marks it safe and provides an idempotency key.
 - No sensitive request-body logging.
 
-`HttpTransport` contains the only production `fetch` behavior. `MockTransport` supports registered method/path handlers, configurable latency, deterministic random injection, simulated server failures, cancellation, and typed JSON responses. Stage 4 adds authentication, billing, and usage route handlers.
+`HttpTransport` contains the production `fetch` behavior. Tests inject small deterministic implementations of the transport contract without adding development data or alternate runtime behavior to the extension bundle.
 
 ### Versioned storage
 
@@ -81,7 +81,6 @@ Outbound messages and inbound responses are validated. The router validates unkn
 - `src/api/client/ApiClient.ts`
 - `src/api/client/contracts.ts`
 - `src/api/index.ts`
-- `src/api/mock/MockTransport.ts`
 - `src/api/transports/HttpTransport.ts`
 
 ### Storage layer
@@ -119,7 +118,7 @@ Outbound messages and inbound responses are validated. The router validates unkn
 ## Assumptions and known limitations
 
 - The execution environment still prevents a complete dependency installation, so `tsc`, ESLint, Prettier, Vitest, and Plasmo build verification remain pending. No partial dependency directory or invalid lockfile is retained.
-- Mock route infrastructure exists, but mock authentication, billing, subscription, usage, and seeded records are Stage 4 work.
+- Authentication and billing modules are added in Stage 4 and are wired to the standalone HTTP API by the current composition root.
 - Repository interfaces and versioned small-record storage exist, but concrete prompt/output/queue repositories and IndexedDB storage are Stage 5 work.
 - File-content schemas exist, including `.txt`, but actual TXT/CSV/JSON parsing services and prompt-composer UI arrive in later queue/UI stages.
 - Adapter contracts exist, but DOM utilities, registries, selectors, and live platform implementations are not part of Stage 3.

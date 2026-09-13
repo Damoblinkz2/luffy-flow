@@ -38,7 +38,7 @@ The generated manifest contains zero `<all_urls>` content scripts. This closes t
 
 - Verify every platform adapter against authenticated live pages.
 - Review applicable platform policies and obtain permission where required.
-- Decide whether mock backend, authentication, billing, and usage claims will be replaced or removed.
+- Deploy the backend, configure its production dependencies, and validate real authentication, payments, reminders, and token debits.
 - Publish privacy, retention, support, and account-deletion policies.
 - Complete accessibility, worker-recovery, upgrade, and multi-browser manual checks.
 - Select a license and prepare store artifacts.

@@ -52,7 +52,13 @@ export const createAuthStore = (service: AuthService): StoreApi<AuthStoreState> 
     signup: async (request) => {
       set({ status: "loading", error: null, notice: null })
       try {
-        set({ status: "authenticated", session: await service.signup(request), error: null })
+        const result = await service.signup(request)
+        set({
+          status: "unauthenticated",
+          session: null,
+          error: null,
+          notice: `We sent a verification link to ${result.email}. Verify your email before logging in.`,
+        })
       } catch (error) {
         set({ status: "error", session: null, error: messageFromError(error) })
         throw error
@@ -69,7 +75,7 @@ export const createAuthStore = (service: AuthService): StoreApi<AuthStoreState> 
         await service.forgotPassword(email)
         set({
           status: "unauthenticated",
-          notice: "If that account exists, mock reset instructions have been accepted.",
+          notice: "If that account exists, the password-reset request has been accepted.",
         })
       } catch (error) {
         set({ status: "error", error: messageFromError(error) })

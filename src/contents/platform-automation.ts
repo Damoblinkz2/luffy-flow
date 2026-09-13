@@ -7,6 +7,7 @@ import { TypedMessageClient } from "~/messaging/client"
 import { TypedMessageRouter } from "~/messaging/router"
 import { listenForRuntimeMessages, RuntimeMessageTransport } from "~/messaging/runtime-transport"
 import { createSettingsRepository } from "~/services/settings/create-settings-repository"
+import { mountInPagePanelFallback } from "~/sidepanel/mount-in-page-fallback"
 import { PlasmoKeyValueStore } from "~/storage/PlasmoKeyValueStore"
 
 import { createContentCoordinator } from "~/content-runtime/create-content-coordinator"
@@ -30,7 +31,6 @@ export const config: PlasmoCSConfig = {
 }
 
 let disposed = false
-let unmountFallback: (() => void) | undefined
 let disposeRuntime: (() => void) | undefined
 
 /** Content startup loads validated adapter settings before exposing automation message handlers. */
@@ -58,12 +58,10 @@ const bootstrap = async (): Promise<void> => {
 
 void bootstrap().catch(() => undefined)
 
-// Browsers without Chrome's Side Panel API receive the Shadow-DOM in-page fallback.
-if (chrome.sidePanel === undefined) {
-  void import("~/sidepanel/mount-in-page-fallback").then(({ mountInPagePanelFallback }) => {
-    if (!disposed) unmountFallback = mountInPagePanelFallback()
-  })
-}
+// Every supported AI page receives a floating launcher. The native browser side panel
+// remains available as a second entry point, while this control keeps prompt entry one
+// click away inside Google Flow, Gemini, Grok, and Meta AI.
+const unmountFallback = mountInPagePanelFallback()
 
 /** Tears down listeners exactly once when the content script or document is unloaded. */
 const dispose = (): void => {

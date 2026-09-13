@@ -1,7 +1,13 @@
 import "~/styles/base.css"
 import { useAuthStore } from "~/components/auth/AuthProvider"
 import { AutomationWorkspace } from "~/components/automation"
-import { ApplicationProviders, Button, ErrorBoundary, LoadingState } from "~/components/common"
+import {
+  ApplicationProviders,
+  BrandLogo,
+  Button,
+  ErrorBoundary,
+  LoadingState,
+} from "~/components/common"
 import { openDashboard } from "~/utils/extension-navigation"
 
 /** Side-panel body gates automation on the persisted LuffyFlow account session. */
@@ -31,8 +37,10 @@ const SidePanel = () => (
       <main className="min-h-screen min-w-[320px] p-3">
         <header className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-primary">LuffyFlow</h1>
-            <p className="text-xs text-foreground/60">Platform workspace</p>
+            <BrandLogo className="text-xl text-primary" />
+            <p className="text-xs text-foreground/60">
+              Platform workspace · drag the browser divider to resize
+            </p>
           </div>
           <Button variant="ghost" onClick={() => void openDashboard("/")}>
             Dashboard

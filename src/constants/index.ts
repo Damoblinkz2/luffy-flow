@@ -25,15 +25,3 @@ export const DEFAULT_API_RETRY_BASE_DELAY_MS = 400
 
 /** Storage schema versions advance only alongside an idempotent migration. */
 export const CURRENT_STORAGE_SCHEMA_VERSION = 1
-
-/** Plan limits are mock product fixtures rather than payment-provider truth. */
-export const MOCK_PLAN_LIMITS = {
-  free: 20,
-  pro: 1_000,
-  business: 10_000,
-} as const
-
-export const DEMO_ACCOUNT = {
-  email: "demo@luffyflow.local",
-  password: "Demo123!",
-} as const

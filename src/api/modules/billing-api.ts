@@ -1,64 +1,63 @@
 import type { TypedApiClient } from "~/api/client/contracts"
 import {
-  changePlanRequestSchema,
   checkoutResultSchema,
-  invoicePlaceholderSchema,
-  subscriptionSchema,
+  purchaseRecordSchema,
+  tokenPacksResponseSchema,
   type CheckoutRequest,
   type CheckoutResult,
-  type InvoicePlaceholder,
-  type PlanId,
-  type Subscription,
+  type PurchaseRecord,
+  type TokenPack,
 } from "~/schemas/billing"
 import { createPageResultSchema, type PageRequest, type PageResult } from "~/schemas/common"
 
-/** Billing contract remains compatible with a future hosted-checkout provider adapter. */
+/** Billing owns token-pack discovery and purchases but never mutates balances directly. */
 export interface BillingApi {
-  getSubscription(): Promise<Subscription>
-  checkout(request: CheckoutRequest): Promise<CheckoutResult>
-  changePlan(planId: PlanId): Promise<Subscription>
-  cancel(): Promise<Subscription>
-  listInvoices(page: PageRequest): Promise<PageResult<InvoicePlaceholder>>
+  listTokenPacks(): Promise<TokenPack[]>
+  checkout(request: CheckoutRequest, idempotencyKey: string): Promise<CheckoutResult>
+  verifyPayment(paymentId: string): Promise<PurchaseRecord>
+  listPurchases(page: PageRequest): Promise<PageResult<PurchaseRecord>>
 }
 
-/** Billing mutations never opt into automatic retries. */
+/** Payment mutations require idempotency and never contain card or crypto-wallet secrets. */
 export class BillingApiClient implements BillingApi {
   constructor(private readonly client: TypedApiClient) {}
 
-  getSubscription(): Promise<Subscription> {
-    return this.client.request({ method: "GET", path: "/billing/subscription" }, subscriptionSchema)
+  async listTokenPacks(): Promise<TokenPack[]> {
+    const response = await this.client.request(
+      { method: "GET", path: "/billing/token-packs", authentication: "omit" },
+      tokenPacksResponseSchema,
+    )
+    return response.items
   }
 
-  checkout(request: CheckoutRequest): Promise<CheckoutResult> {
+  checkout(request: CheckoutRequest, idempotencyKey: string): Promise<CheckoutResult> {
     return this.client.request(
-      { method: "POST", path: "/billing/checkout", body: request, retry: "never" },
+      {
+        method: "POST",
+        path: "/billing/checkout",
+        body: request,
+        idempotencyKey,
+        retry: "safe",
+      },
       checkoutResultSchema,
     )
   }
 
-  changePlan(planId: PlanId): Promise<Subscription> {
-    const body = changePlanRequestSchema.parse({ planId })
+  verifyPayment(paymentId: string): Promise<PurchaseRecord> {
     return this.client.request(
-      { method: "POST", path: "/billing/change-plan", body, retry: "never" },
-      subscriptionSchema,
+      { method: "GET", path: `/billing/payments/${encodeURIComponent(paymentId)}/verify` },
+      purchaseRecordSchema,
     )
   }
 
-  cancel(): Promise<Subscription> {
-    return this.client.request(
-      { method: "POST", path: "/billing/cancel", retry: "never" },
-      subscriptionSchema,
-    )
-  }
-
-  async listInvoices(page: PageRequest): Promise<PageResult<InvoicePlaceholder>> {
+  async listPurchases(page: PageRequest): Promise<PageResult<PurchaseRecord>> {
     const result = await this.client.request(
       {
         method: "GET",
-        path: "/billing/invoices",
+        path: "/billing/purchases",
         query: { cursor: page.cursor, limit: page.limit },
       },
-      createPageResultSchema(invoicePlaceholderSchema),
+      createPageResultSchema(purchaseRecordSchema),
     )
     return {
       items: result.items,

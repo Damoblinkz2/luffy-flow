@@ -26,8 +26,8 @@ The suite verifies:
   content-script files.
 - The generated manifest contains one narrowly matched content script and no `<all_urls>` access.
 - Popup, side panel, dashboard, and options render in signed-out state without uncaught page errors.
-- Development mock login succeeds in the real extension runtime.
-- The authenticated session is restored across dashboard, popup, side panel, and options contexts.
+- Signed-out surfaces contain no seeded credentials or obsolete development-state namespaces.
+- Authenticated cross-surface restoration requires a reachable configured API and is part of the manual release pass.
 
 This gate found and fixed two production-only blank-page failures that unit tests could not expose:
 

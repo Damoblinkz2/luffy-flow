@@ -36,7 +36,7 @@ corepack pnpm run test:browser
 - [x] Chrome MV3 production build completes.
 - [x] Three production-extension Playwright smoke tests pass in an isolated Chrome for Testing profile.
 - [x] Popup, side panel, dashboard, and options render without uncaught production runtime errors.
-- [x] Mock login and session restoration work across all extension surfaces in real Chromium.
+- [x] Signed-out surfaces render without seeded credentials or obsolete development state in real Chromium.
 - [ ] Repeat `validate:release` on the final clean release commit in CI.
 - [ ] Add CI artifacts for test results, coverage, manifest, dependency audit, and build archive.
 - [ ] Review or remediate package-manager peer/deprecation warnings before release.
@@ -49,7 +49,7 @@ Inspect `build/chrome-mv3-prod/manifest.json`, not only `package.json`.
 - [x] Confirm the generated manifest contains no unintended `<all_urls>` content scripts.
 - [x] Confirm the single content script runs only on documented Google Flow, Gemini, Grok, Meta AI, and X Grok routes.
 - [x] Confirm `host_permissions` contains only origins required for shipped adapters.
-- [ ] Replace the example optional backend permission with the exact production API origin or implement a user-initiated optional permission flow.
+- [ ] Replace the local development backend permission with the exact production HTTPS API origin.
 - [ ] Reassess whether the full `tabs` permission is necessary or can be narrowed to `activeTab` plus explicit host permissions.
 - [ ] Confirm `storage`, `downloads`, `sidePanel`, and `alarms` are required and accurately disclosed.
 - [ ] Confirm web-accessible resources expose only files required for the in-page fallback and only to supported origins.
@@ -156,17 +156,17 @@ Use dedicated test accounts and non-sensitive prompts. Record browser version, a
 
 ## 9. Production backend, authentication, and billing — blocking
 
-- [ ] Decide whether production accounts, billing, subscriptions, usage, invoices, and remote sync are in the release scope.
-- [ ] Set `PLASMO_PUBLIC_USE_MOCK_API=false` and `PLASMO_PUBLIC_APP_ENV=production` for production builds.
-- [ ] Replace `https://api.example.com` with the exact HTTPS production origin.
+- [x] Accounts, token billing, purchase history, and reminders are in scope; remote prompt/output sync is not currently claimed.
+- [ ] Set `PLASMO_PUBLIC_APP_ENV=production` for production builds.
+- [ ] Set `PLASMO_PUBLIC_API_BASE_URL` to the exact HTTPS production API URL.
 - [ ] Confirm no secret is present in any `PLASMO_PUBLIC_` variable or extension bundle.
-- [ ] Implement the documented auth endpoints and response schemas.
+- [x] Implement the documented auth endpoints and response schemas.
 - [ ] Use production password hashing, abuse controls, email verification/recovery, and account enumeration protections.
 - [ ] Use short-lived access tokens, refresh rotation, revocation, issuer/audience validation, and secure token-storage review.
 - [ ] Configure strict extension-origin CORS and reject arbitrary browser origins.
 - [ ] Enforce authorization and record ownership server-side for every request.
 - [ ] Enforce idempotency for usage and other safely retryable mutations.
-- [ ] Implement real subscription/billing webhooks and server-side entitlement checks if billing ships.
+- [ ] Verify payment webhooks, atomic wallet credits/debits, and server-side balance checks if billing ships.
 - [ ] Never collect payment-card fields inside the extension.
 - [ ] Add backend availability, timeout, rate-limit, audit, and incident-response monitoring.
 - [ ] Run a dedicated backend security assessment.
@@ -177,7 +177,7 @@ Use dedicated test accounts and non-sensitive prompts. Record browser version, a
 - [ ] Document whether prompts, outputs, filenames, URLs, account data, and diagnostics leave the browser.
 - [ ] Define retention periods for local and remote records.
 - [ ] Verify export includes all user-owned local data in a portable format.
-- [ ] Verify clear-data removes sessions, mock state, settings, queues, prompts, outputs, and sequence counters.
+- [ ] Verify clear-data removes sessions, settings, queues, prompts, outputs, and sequence counters.
 - [ ] Implement production account deletion and backend data deletion if accounts ship.
 - [ ] Publish a privacy policy matching actual permissions and behavior.
 - [ ] Publish support and deletion-request contact information.
@@ -221,7 +221,7 @@ Use dedicated test accounts and non-sensitive prompts. Record browser version, a
 - [ ] Run `corepack pnpm run validate:release` from the final clean commit.
 - [ ] Run `corepack pnpm run package` and inspect the resulting archive.
 - [ ] Confirm source maps, test data, environment files, coverage, and development-only artifacts are absent.
-- [ ] Confirm production mock credentials and development diagnostics are removed or explicitly acceptable for the distribution channel.
+- [x] Confirm seeded credentials and development-only API state are absent from the production bundle.
 - [ ] Verify the packaged manifest version, permissions, CSP, icons, and resource hashes.
 - [ ] Scan the package for secrets and unexpected network origins.
 - [ ] Prepare store icon, screenshots, description, support URL, privacy-policy URL, and permission justifications.

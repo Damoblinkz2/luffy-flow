@@ -22,6 +22,8 @@ export const OutputCard = ({
   onDelete,
 }: OutputCardProps) => {
   const filename = output.userDefinedName ?? output.generatedFilename
+  const nativeFormat = mediaFormatLabel(output)
+  const downloadLabel = output.outputType === "text" ? "Download" : `Download ${nativeFormat}`
   return (
     <article className="af-card space-y-3">
       <div className="flex items-start justify-between gap-3">
@@ -32,6 +34,7 @@ export const OutputCard = ({
           <div className="mt-1 flex flex-wrap gap-2">
             <Badge tone="info">{output.platform}</Badge>
             <Badge>{output.outputType}</Badge>
+            {output.outputType === "text" ? null : <Badge tone="info">{nativeFormat}</Badge>}
             <Badge
               tone={
                 output.downloadStatus === "failed"
@@ -82,7 +85,7 @@ export const OutputCard = ({
       <div className="flex flex-wrap gap-1">
         {onDownload === undefined ? null : (
           <Button variant="secondary" onClick={onDownload}>
-            Download
+            {downloadLabel}
           </Button>
         )}
         {onRename === undefined ? null : (
@@ -98,4 +101,11 @@ export const OutputCard = ({
       </div>
     </article>
   )
+}
+
+/** Labels the captured source format; media is downloaded natively rather than renamed as text. */
+const mediaFormatLabel = (output: OutputRecord): string => {
+  const extension =
+    output.fileExtension ?? /\.[a-z0-9]{1,16}$/i.exec(output.generatedFilename)?.[0] ?? ".bin"
+  return extension.slice(1).toUpperCase()
 }

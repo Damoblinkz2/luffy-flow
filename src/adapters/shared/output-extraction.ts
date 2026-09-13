@@ -28,8 +28,8 @@ export const detectMediaOutput = (root: HTMLElement): DetectedOutput | null => {
   const platformOutputId = outputId(root)
   const rawTitle = media.getAttribute("aria-label") ?? undefined
   const detectedTitle = rawTitle === undefined ? undefined : rawTitle.slice(0, 1_000)
-  const detectedMimeType = mimeType(sourceUrl, type)
-  const detectedExtension = fileExtension(sourceUrl)
+  const detectedMimeType = declaredMimeType(media) ?? mimeType(sourceUrl, type)
+  const detectedExtension = fileExtension(sourceUrl) ?? extensionForMime(detectedMimeType)
 
   return {
     type,
@@ -133,10 +133,43 @@ const mimeType = (value: string, type: OutputType): string | undefined => {
   if (extension === ".png") return "image/png"
   if (extension === ".jpg" || extension === ".jpeg") return "image/jpeg"
   if (extension === ".webp") return "image/webp"
+  if (extension === ".gif") return "image/gif"
+  if (extension === ".avif") return "image/avif"
   if (extension === ".mp4") return "video/mp4"
   if (extension === ".webm") return type === "audio" ? "audio/webm" : "video/webm"
+  if (extension === ".mov") return "video/quicktime"
   if (extension === ".mp3") return "audio/mpeg"
   if (extension === ".wav") return "audio/wav"
+  if (extension === ".m4a") return "audio/mp4"
+  if (extension === ".ogg") return "audio/ogg"
+  if (extension === ".flac") return "audio/flac"
+  return undefined
+}
+
+/** Reads a platform-declared media MIME type without fetching cross-origin media. */
+const declaredMimeType = (element: Element): string | undefined => {
+  const candidate =
+    element.getAttribute("type") ?? element.querySelector<HTMLSourceElement>("source[type]")?.type
+  return candidate !== undefined && /^[a-z]+\/[a-z0-9.+-]+$/i.test(candidate)
+    ? candidate
+    : undefined
+}
+
+/** Supplies a safe suffix when a signed or CDN media URL does not contain a file extension. */
+const extensionForMime = (mimeType: string | undefined): string | undefined => {
+  if (mimeType === "image/png") return ".png"
+  if (mimeType === "image/jpeg") return ".jpg"
+  if (mimeType === "image/webp") return ".webp"
+  if (mimeType === "image/gif") return ".gif"
+  if (mimeType === "image/avif") return ".avif"
+  if (mimeType === "video/mp4") return ".mp4"
+  if (mimeType === "video/webm") return ".webm"
+  if (mimeType === "video/quicktime") return ".mov"
+  if (mimeType === "audio/mpeg") return ".mp3"
+  if (mimeType === "audio/wav" || mimeType === "audio/x-wav") return ".wav"
+  if (mimeType === "audio/mp4") return ".m4a"
+  if (mimeType === "audio/ogg") return ".ogg"
+  if (mimeType === "audio/flac") return ".flac"
   return undefined
 }
 

@@ -13,17 +13,12 @@ import { createId } from "~/utils/ids"
 import type { Clock } from "~/utils/time"
 import { systemClock } from "~/utils/time"
 
-/** Usage tracking is a narrow port implemented by the Stage 4 subscription service. */
-export interface UsageEventTracker {
-  incrementUsage(idempotencyKey: string): Promise<unknown>
-}
-
 export type OutputNamingSettings = Pick<
   LuffyflowSettings,
   "outputNamingPattern" | "sequencePadding" | "sequenceScope" | "defaultOutputFileFormat"
 >
 
-/** Output capture serializes deduplication, naming, usage, and prompt completion as a replay-safe flow. */
+/** Output capture serializes deduplication, naming, and prompt completion as a replay-safe flow. */
 export class OutputCaptureService {
   private operation: Promise<void> = Promise.resolve()
 
@@ -33,7 +28,6 @@ export class OutputCaptureService {
     private readonly outputs: OutputRepository,
     private readonly naming: OutputNamingService,
     private readonly queue: QueueService,
-    private readonly usage: UsageEventTracker,
     private readonly getNamingSettings: () => Promise<OutputNamingSettings>,
     private readonly clock: Clock = systemClock,
   ) {}
@@ -55,7 +49,6 @@ export class OutputCaptureService {
       const existing = await this.outputs.getByFingerprint(fingerprint)
       if (existing !== null) {
         if (prompt.status !== "completed") {
-          await this.usage.incrementUsage(`output:${existing.id}`)
           await this.queue.completePrompt(prompt.id, existing.id)
         }
         return existing
@@ -87,7 +80,6 @@ export class OutputCaptureService {
         syncStatus: "local_only",
       })
       const saved = await this.outputs.createIfAbsent(record)
-      await this.usage.incrementUsage(`output:${saved.record.id}`)
       await this.queue.completePrompt(prompt.id, saved.record.id)
       return saved.record
     })

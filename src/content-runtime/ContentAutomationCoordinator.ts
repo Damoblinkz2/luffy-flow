@@ -18,7 +18,7 @@ export class ContentAutomationCoordinator {
 
   constructor(
     private readonly registry: PlatformAdapterRegistry,
-    private readonly onGenerationStarted?: (promptId: string) => Promise<void>,
+    private readonly onPromptSubmitted?: (promptId: string) => Promise<void>,
   ) {}
 
   /** Executes one leased prompt end to end while rejecting duplicates and stale generations. */
@@ -78,11 +78,12 @@ export class ContentAutomationCoordinator {
       const input = unwrap(await adapter.findPromptInput(controller.signal))
       unwrap(await adapter.setPromptText(input, payload.promptText, controller.signal))
       unwrap(await adapter.submitPrompt(controller.signal))
-      unwrap(await adapter.waitForGenerationStart(context, controller.signal))
-      const generationReporter = this.onGenerationStarted
-      if (generationReporter !== undefined) {
-        await generationReporter(payload.promptId).catch(() => undefined)
+      const submissionReporter = this.onPromptSubmitted
+      if (submissionReporter !== undefined) {
+        // A successful submit action must not silently bypass the authoritative one-token debit.
+        await submissionReporter(payload.promptId)
       }
+      unwrap(await adapter.waitForGenerationStart(context, controller.signal))
       const detected = unwrap(await adapter.waitForGenerationComplete(context, controller.signal))
       this.completedCommands.add(commandKey)
       trimSet(this.completedCommands, 1_000)

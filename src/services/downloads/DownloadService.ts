@@ -2,7 +2,7 @@ import JSZip from "jszip"
 
 import { LuffyflowError } from "~/errors/luffyflow-error"
 import type { TypedMessageRouter } from "~/messaging/router"
-import type { OutputRecord, TextExportFormat } from "~/schemas"
+import type { MediaDownloadLocation, OutputRecord, TextExportFormat } from "~/schemas"
 import { buildSafeFilename } from "~/services/naming/filename"
 import type { OutputRepository } from "~/storage/repositories/contracts"
 
@@ -11,6 +11,8 @@ const DOWNLOAD_SOURCES = ["dashboard", "sidepanel", "in_page_panel"] as const
 export interface DownloadServiceOptions {
   outputs: OutputRepository
   getAuthenticatedUserId(): Promise<string>
+  /** Uses Chrome's native Save As picker when users opt out of the default Downloads folder. */
+  getMediaDownloadLocation?(): Promise<MediaDownloadLocation>
 }
 
 /** Background-owned downloads validate ownership, schemes, filenames, and text serialization. */
@@ -123,8 +125,8 @@ export class DownloadService {
     })
   }
 
-  /** Starts a direct media download only when the captured source URL is still available. */
-  private downloadRemote(output: OutputRecord): Promise<number> {
+  /** Starts a direct media download and preserves its detected native extension and MIME-compatible name. */
+  private async downloadRemote(output: OutputRecord): Promise<number> {
     if (output.sourceUrl === undefined) throw unavailableMediaError()
     let url: URL
     try {
@@ -133,11 +135,19 @@ export class DownloadService {
       throw unavailableMediaError()
     }
     if (url.protocol !== "https:" && url.protocol !== "http:") throw unavailableMediaError()
+    const location = await this.mediaDownloadLocation()
     return startBrowserDownload({
       url: url.href,
-      filename: output.userDefinedName ?? output.generatedFilename,
-      saveAs: false,
+      filename: filenameForNativeMedia(output),
+      // Chrome intentionally does not let an extension pick a filesystem path.
+      // saveAs hands folder choice to the person using the browser instead.
+      saveAs: location === "choose_folder",
     })
+  }
+
+  /** Provides the safe default for older callers that predate the location setting. */
+  private mediaDownloadLocation(): Promise<MediaDownloadLocation> {
+    return this.options.getMediaDownloadLocation?.() ?? Promise.resolve("default")
   }
 
   /** Updates all outputs associated with a terminal Chrome download event. */
@@ -228,6 +238,43 @@ const renderText = (output: OutputRecord, format: TextExportFormat): string => {
 const filenameForText = (output: OutputRecord, format: TextExportFormat): string => {
   const current = output.userDefinedName ?? output.generatedFilename
   return buildSafeFilename(current.replace(/\.[a-z0-9]{1,16}$/i, ""), `.${format}`)
+}
+
+/** Keeps remote image/video/audio names aligned with the format that the platform exposed. */
+const filenameForNativeMedia = (output: OutputRecord): string => {
+  const current = output.userDefinedName ?? output.generatedFilename
+  const extension =
+    output.fileExtension ??
+    extensionForMime(output.mimeType) ??
+    /\.[a-z0-9]{1,16}$/i.exec(current)?.[0]?.toLowerCase() ??
+    fallbackExtension(output.outputType)
+  return buildSafeFilename(current.replace(/\.[a-z0-9]{1,16}$/i, ""), extension)
+}
+
+/** Maps common captured MIME types to filename extensions when URLs omit a readable suffix. */
+const extensionForMime = (mimeType: string | undefined): string | undefined => {
+  if (mimeType === "image/png") return ".png"
+  if (mimeType === "image/jpeg") return ".jpg"
+  if (mimeType === "image/webp") return ".webp"
+  if (mimeType === "image/gif") return ".gif"
+  if (mimeType === "image/avif") return ".avif"
+  if (mimeType === "video/mp4") return ".mp4"
+  if (mimeType === "video/webm") return ".webm"
+  if (mimeType === "video/quicktime") return ".mov"
+  if (mimeType === "audio/mpeg") return ".mp3"
+  if (mimeType === "audio/wav" || mimeType === "audio/x-wav") return ".wav"
+  if (mimeType === "audio/mp4") return ".m4a"
+  if (mimeType === "audio/ogg") return ".ogg"
+  if (mimeType === "audio/flac") return ".flac"
+  return undefined
+}
+
+/** Falls back only when neither the platform URL nor metadata reveals a native media suffix. */
+const fallbackExtension = (type: OutputRecord["outputType"]): string => {
+  if (type === "image") return ".png"
+  if (type === "video") return ".mp4"
+  if (type === "audio") return ".mp3"
+  return ".bin"
 }
 
 /** Encodes generated text locally, avoiding any server upload during export. */

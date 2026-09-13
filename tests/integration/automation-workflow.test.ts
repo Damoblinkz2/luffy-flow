@@ -1,13 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { ApiClient } from "~/api/client/ApiClient"
-import { createMockApiRuntime } from "~/api/mock/create-mock-api"
-import { AuthApiClient } from "~/api/modules/auth-api"
-import { DEMO_ACCOUNT } from "~/constants"
-import { Logger } from "~/logging/logger"
-import { authSessionSchema, queueStateSchema } from "~/schemas"
-import { AuthService } from "~/services/auth/auth-service"
-import { DelegatingAuthTokenProvider } from "~/services/auth/delegating-token-provider"
+import { queueStateSchema } from "~/schemas"
 import { DownloadService } from "~/services/downloads/DownloadService"
 import { OutputNamingService } from "~/services/naming/OutputNamingService"
 import { OutputCaptureService } from "~/services/outputs/OutputCaptureService"
@@ -19,7 +12,6 @@ import {
   sequenceCounterCollectionSchema,
 } from "~/storage/repositories/LocalSequenceRepository"
 import { VersionedStorageNamespace } from "~/storage/VersionedStorageNamespace"
-import { createAuthStore } from "~/stores/auth-store"
 
 import { chromeControls } from "../helpers/chrome-mock"
 import { fixedClock, fixedNow, ids } from "../helpers/fixtures"
@@ -29,50 +21,10 @@ import {
   MemoryPromptRepository,
 } from "../helpers/memory"
 
-describe("login-to-download automation workflow", () => {
-  it("logs in, imports prompts, runs a mock adapter, saves/names output, and downloads it", async () => {
+describe("local automation workflow", () => {
+  it("imports prompts, processes an adapter result, saves/names output, and downloads it", async () => {
     const keyValues = new MemoryKeyValueStore()
-    const logger = new Logger("integration", {
-      minimumLevel: "error",
-      privacyMode: true,
-      sink: { write: vi.fn() },
-      clock: fixedClock,
-    })
-    const mockApi = createMockApiRuntime(
-      keyValues,
-      { latencyMs: 0, failureRate: 0, random: () => 1 },
-      fixedClock,
-    )
-    const sessionStorage = new VersionedStorageNamespace({
-      key: "integration.auth",
-      currentVersion: 1,
-      schema: authSessionSchema,
-      store: keyValues,
-      now: fixedClock.now,
-    })
-    const tokenProvider = new DelegatingAuthTokenProvider()
-    const apiClient = new ApiClient({
-      baseUrl: "https://mock.luffyflow.test",
-      defaultTimeoutMs: 5_000,
-      maximumSafeRetryCount: 1,
-      retryBaseDelayMs: 0,
-      transport: mockApi.transport,
-      tokenProvider,
-      logger,
-      random: () => 0,
-    })
-    const authService = new AuthService(
-      new AuthApiClient(apiClient),
-      sessionStorage,
-      logger,
-      fixedClock,
-    )
-    tokenProvider.setDelegate(authService)
-    const authStore = createAuthStore(authService)
-    await authStore.getState().login(DEMO_ACCOUNT)
-    const userId = authStore.getState().session?.user.id
-    expect(authStore.getState().session?.user.email).toBe(DEMO_ACCOUNT.email)
-    if (userId === undefined) throw new Error("Expected authenticated user")
+    const userId = ids.user
 
     const imported = await new PromptImportService().importFile(
       {
@@ -133,7 +85,6 @@ describe("login-to-download automation workflow", () => {
       store: keyValues,
       now: fixedClock.now,
     })
-    const usage = { incrementUsage: vi.fn(() => Promise.resolve(undefined)) }
     const capture = new OutputCaptureService(
       prompts,
       outputs,
@@ -143,7 +94,6 @@ describe("login-to-download automation workflow", () => {
         fixedClock,
       ),
       queueService,
-      usage,
       () =>
         Promise.resolve({
           outputNamingPattern: "{platform}-{date}-{sequence}",
@@ -159,7 +109,6 @@ describe("login-to-download automation workflow", () => {
     expect(await outputs.getById(savedOutput.id)).toEqual(savedOutput)
     expect((await queues.getActive())?.status).toBe("completed")
     expect((await prompts.getById(prompt.id))?.outputIds).toContain(savedOutput.id)
-    expect(usage.incrementUsage).toHaveBeenCalledWith(`output:${savedOutput.id}`)
 
     const downloads = new DownloadService({
       outputs,
@@ -176,6 +125,5 @@ describe("login-to-download automation workflow", () => {
       .toBe("completed")
 
     downloads.dispose()
-    mockApi.dispose()
   })
 })

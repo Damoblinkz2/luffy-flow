@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { createDefaultAdapterRegistry } from "~/adapters/create-default-registry"
+import { TypedMessageClient } from "~/messaging/client"
+import { RuntimeMessageTransport } from "~/messaging/runtime-transport"
+import { platformStatusSnapshotSchema } from "~/schemas"
 import type { SupportedPlatform } from "~/schemas"
 
 export interface ActivePlatformSnapshot {
@@ -27,6 +30,38 @@ export const useActivePlatform = (): ActivePlatformSnapshot & { refresh(): void 
     let active = true
     const inspect = async (): Promise<void> => {
       try {
+        // Content scripts cannot use chrome.tabs. Ask the background for the
+        // sender tab instead, so the in-page drawer has the correct tab ID for
+        // starting automation and never crashes after its launcher is clicked.
+        if (globalThis.location.protocol !== "chrome-extension:") {
+          const status = await new TypedMessageClient(
+            "in_page_panel",
+            new RuntimeMessageTransport(),
+          ).send({
+            kind: "platform/status/get",
+            target: "background",
+            payload: {},
+            responseSchema: platformStatusSnapshotSchema,
+          })
+          if (!active) return
+          const url = new URL(globalThis.location.href)
+          setSnapshot({
+            loading: false,
+            supported: status.supported,
+            tabId: status.tabId,
+            url: `${url.origin}${url.pathname}`,
+            ...(status.platform === undefined
+              ? {}
+              : {
+                  platform: status.platform,
+                  displayName: platformLabel(status.platform),
+                }),
+            ...(status.adapterHealth === undefined
+              ? {}
+              : { adapterVersion: status.adapterHealth.adapterVersion }),
+          })
+          return
+        }
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
         if (!active) return
         if (tab?.id === undefined || tab.url === undefined) {
@@ -62,6 +97,11 @@ export const useActivePlatform = (): ActivePlatformSnapshot & { refresh(): void 
       }
     }
     void inspect()
+    if (globalThis.location.protocol !== "chrome-extension:") {
+      return () => {
+        active = false
+      }
+    }
     const onActivated = (): void => void inspect()
     const onUpdated = (_tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo): void => {
       if (changeInfo.url !== undefined || changeInfo.status === "complete") void inspect()
@@ -77,3 +117,12 @@ export const useActivePlatform = (): ActivePlatformSnapshot & { refresh(): void 
 
   return { ...snapshot, refresh }
 }
+
+/** Keep platform labels consistent when an in-page component receives background status. */
+const platformLabel = (platform: SupportedPlatform): string =>
+  ({
+    "google-flow": "Google Flow",
+    gemini: "Gemini",
+    grok: "Grok",
+    "meta-ai": "Meta AI",
+  })[platform]

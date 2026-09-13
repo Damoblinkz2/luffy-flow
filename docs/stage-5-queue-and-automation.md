@@ -33,7 +33,7 @@ in separate versioned Plasmo storage namespaces.
 - Optional error/timestamp fields use explicit null deletion semantics in repository patches.
 - Output fingerprints are protected by a unique IndexedDB index.
 - Output creation is idempotent and filename lookups support duplicate prevention.
-- Mock remote repository decorators add configurable latency/failure behavior over an isolated
+- Repository contract tests add deterministic latency/failure behavior over an isolated
   backing repository while preserving the same contracts.
 
 ## Prompt import, including TXT upload
@@ -65,7 +65,7 @@ without truncating those suffixes when resolving duplicates.
 
 The background coordinator performs this durable flow:
 
-1. Authenticate and verify remaining mock subscription usage.
+1. Authenticate and verify that the token wallet has at least one token.
 2. Validate ownership and acquire a revisioned queue lease.
 3. Persist the current prompt and content command ID.
 4. Send a validated command to the configured target tab.
@@ -105,7 +105,6 @@ selectors or bypass behavior.
 - `src/storage/repositories/LocalQueueRepository.ts`
 - `src/storage/repositories/LocalSequenceRepository.ts`
 - `src/storage/repositories/LocalSettingsRepository.ts`
-- `src/storage/repositories/MockRemoteRepositories.ts`
 - `src/storage/repositories/create-local-repositories.ts`
 - `src/storage/repositories/pagination.ts`
 - `src/storage/repositories/repository-errors.ts`
@@ -125,7 +124,7 @@ selectors or bypass behavior.
 - `docs/stage-5-queue-and-automation.md`
 
 Stage 5 also extends queue/message schemas, repository contracts, the Stage 4 composition root,
-storage/service exports, and mock secret hashing reuse.
+storage/service exports, and shared record validation.
 
 ## Validation and known limitations
 

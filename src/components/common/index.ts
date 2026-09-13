@@ -1,4 +1,5 @@
 export * from "./ApplicationProviders"
+export * from "./BrandLogo"
 export * from "./ConfirmDialog"
 export * from "./ErrorBoundary"
 export * from "./ui"

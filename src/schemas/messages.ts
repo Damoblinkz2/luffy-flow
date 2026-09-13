@@ -7,7 +7,7 @@ import { serializedLuffyflowErrorSchema } from "./errors"
 import { promptStatusSchema } from "./prompt"
 import { queueStateSchema } from "./queue"
 import { luffyflowSettingsSchema, textExportFormatSchema } from "./settings"
-import { usageSchema } from "./billing"
+import { tokenWalletSchema } from "./billing"
 
 /** Every message includes version, routing, and correlation metadata before its payload. */
 const messageMetadataShape = {
@@ -41,6 +41,9 @@ const messageErrorSchema = serializedLuffyflowErrorSchema.pick({
   recoverable: true,
 })
 
+/** A successful native-panel request carries no page data back into the content script. */
+export const sidePanelOpenResultSchema = z.object({ opened: z.literal(true) })
+
 /** The discriminated union is the runtime trust boundary for extension messaging. */
 export const extensionMessageSchema = z.discriminatedUnion("kind", [
   createMessageSchema("auth/status/get", z.object({}).strict()),
@@ -65,6 +68,7 @@ export const extensionMessageSchema = z.discriminatedUnion("kind", [
       adapterHealth: adapterHealthSchema.optional(),
     }),
   ),
+  createMessageSchema("sidepanel/open", z.object({}).strict()),
   createMessageSchema(
     "queue/create",
     z.object({
@@ -192,7 +196,7 @@ export const extensionMessageSchema = z.discriminatedUnion("kind", [
     z.object({ outputId: entityIdSchema, error: messageErrorSchema }),
   ),
   createMessageSchema("settings/updated", z.object({ settings: luffyflowSettingsSchema })),
-  createMessageSchema("usage/updated", z.object({ usage: usageSchema })),
+  createMessageSchema("tokens/updated", z.object({ wallet: tokenWalletSchema })),
   createMessageSchema(
     "adapter/error",
     z.object({

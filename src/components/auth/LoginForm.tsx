@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 
-import { DEMO_ACCOUNT } from "~/constants"
 import { loginRequestSchema, type LoginRequest } from "~/schemas/auth"
 
 import { useAuthStore } from "./AuthProvider"
@@ -17,10 +16,10 @@ export const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
   const login = useAuthStore((state) => state.login)
   const status = useAuthStore((state) => state.status)
   const serverError = useAuthStore((state) => state.error)
+  const notice = useAuthStore((state) => state.notice)
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginRequest>({ resolver: zodResolver(loginRequestSchema) })
 
@@ -31,11 +30,6 @@ export const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
     } catch {
       // The store exposes a redacted user-facing error above the submit action.
     }
-  }
-
-  const fillDemoAccount = (): void => {
-    setValue("email", DEMO_ACCOUNT.email, { shouldValidate: true })
-    setValue("password", DEMO_ACCOUNT.password, { shouldValidate: true })
   }
 
   return (
@@ -85,6 +79,11 @@ export const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
           {serverError}
         </p>
       )}
+      {notice === null ? null : (
+        <p className="rounded-lg bg-primary/10 p-3 text-sm" role="status">
+          {notice}
+        </p>
+      )}
 
       <button
         type="submit"
@@ -94,19 +93,11 @@ export const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
         {status === "loading" ? "Logging in..." : "Log in"}
       </button>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+      <div className="text-sm">
         <button type="button" className="text-primary underline" onClick={onForgotPassword}>
           Forgot password?
         </button>
-        <button type="button" className="text-primary underline" onClick={fillDemoAccount}>
-          Use demo account
-        </button>
       </div>
-
-      <p className="rounded-lg border border-border p-3 text-xs">
-        Development-only demo: <strong>{DEMO_ACCOUNT.email}</strong> /{" "}
-        <strong>{DEMO_ACCOUNT.password}</strong>
-      </p>
     </form>
   )
 }

@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AuthProvider } from "~/components/auth/AuthProvider"
 import { LoginForm } from "~/components/auth/LoginForm"
-import { DEMO_ACCOUNT } from "~/constants"
 import type { AuthSession } from "~/schemas"
 import type { AuthService } from "~/services/auth/auth-service"
 import { createAuthStore } from "~/stores/auth-store"
@@ -12,12 +11,16 @@ import { createAuthStore } from "~/stores/auth-store"
 import { fixedNow, ids } from "../helpers/fixtures"
 
 describe("LoginForm", () => {
-  it("fills the demo credentials and submits them through the auth store", async () => {
+  it("submits user-entered credentials through the auth store", async () => {
+    const credentials = { email: "person@example.com", password: "Secure-Password1!" }
     const session: AuthSession = {
       user: {
         id: ids.user,
-        email: DEMO_ACCOUNT.email,
-        displayName: "Demo",
+        email: credentials.email,
+        displayName: "Person",
+        role: "user",
+        status: "active",
+        emailVerified: true,
         createdAt: fixedNow.toISOString(),
         updatedAt: fixedNow.toISOString(),
       },
@@ -40,10 +43,11 @@ describe("LoginForm", () => {
         <LoginForm onSuccess={onSuccess} />
       </AuthProvider>,
     )
-    await user.click(screen.getByRole("button", { name: "Use demo account" }))
+    await user.type(screen.getByLabelText("Email address"), credentials.email)
+    await user.type(screen.getByLabelText("Password"), credentials.password)
     await user.click(screen.getByRole("button", { name: "Log in" }))
 
-    expect(login).toHaveBeenCalledWith(DEMO_ACCOUNT)
+    expect(login).toHaveBeenCalledWith(credentials)
     expect(onSuccess).toHaveBeenCalledOnce()
   })
 })

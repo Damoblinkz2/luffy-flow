@@ -1,64 +1,83 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
-import { useAuthStore } from "~/components/auth/AuthProvider"
-import { ApplicationProviders, Button, LoadingState } from "~/components/common"
-import { openDashboard } from "~/utils/extension-navigation"
+import { BrandLogo, Button } from "~/components/common"
+import { LuffyflowError } from "~/errors/luffyflow-error"
+import { TypedMessageClient } from "~/messaging/client"
+import { RuntimeMessageTransport } from "~/messaging/runtime-transport"
+import { sidePanelOpenResultSchema } from "~/schemas"
 
-import { AutomationWorkspace } from "./AutomationWorkspace"
+/** This Shadow-DOM launcher opens Chrome's native panel instead of covering the AI page. */
+export const InPagePanelFallback = () => {
+  const client = useMemo(
+    () => new TypedMessageClient("in_page_panel", new RuntimeMessageTransport()),
+    [],
+  )
+  const [opening, setOpening] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
 
-export interface InPagePanelFallbackProps {
-  onClose?: (() => void) | undefined
-}
+  /** Ask the background worker to open the browser-owned, resizeable side panel for this tab. */
+  const openNativeSidePanel = async (): Promise<void> => {
+    setOpening(true)
+    setMessage(null)
+    try {
+      await client.send({
+        kind: "sidepanel/open",
+        target: "background",
+        payload: {},
+        responseSchema: sidePanelOpenResultSchema,
+      })
+      setMessage("LuffyFlow opened in the browser side panel. Drag its divider to resize it.")
+    } catch (error) {
+      setMessage(
+        error instanceof LuffyflowError
+          ? error.userMessage
+          : "LuffyFlow could not open the browser side panel.",
+      )
+    } finally {
+      setOpening(false)
+    }
+  }
 
-/** This Shadow-DOM-ready root is the fallback renderer for browsers without Chrome Side Panel. */
-export const InPagePanelFallback = ({ onClose }: InPagePanelFallbackProps) => (
-  <ApplicationProviders>
-    <InPagePanelBody onClose={onClose} />
-  </ApplicationProviders>
-)
-
-/** Renders the isolated in-page controls while the error boundary owns crash recovery. */
-const InPagePanelBody = ({ onClose }: InPagePanelFallbackProps) => {
-  const [collapsed, setCollapsed] = useState(false)
-  const status = useAuthStore((state) => state.status)
-  if (collapsed) {
-    return (
+  return (
+    <div>
       <Button
         className="fixed bottom-4 right-4 z-[2147483647] shadow-panel"
-        onClick={() => setCollapsed(false)}
+        busy={opening}
+        onClick={(event) => {
+          // Supported AI apps frequently listen for document clicks. Keep this
+          // extension-owned control from being interpreted as a page interaction.
+          event.preventDefault()
+          event.stopPropagation()
+          void openNativeSidePanel()
+        }}
+        style={{
+          position: "fixed",
+          right: "16px",
+          bottom: "16px",
+          zIndex: 2_147_483_647,
+          minHeight: "48px",
+        }}
       >
-        Open LuffyFlow
+        <BrandLogo showName={false} />
+        <span>Open LuffyFlow</span>
       </Button>
-    )
-  }
-  return (
-    <aside
-      className="fixed bottom-4 right-4 top-4 z-[2147483647] w-[min(420px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border bg-background p-3 text-foreground shadow-panel"
-      aria-label="LuffyFlow in-page panel"
-    >
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <strong className="text-primary">LuffyFlow</strong>
-        <div className="flex gap-1">
-          <Button variant="ghost" onClick={() => setCollapsed(true)}>
-            Collapse
-          </Button>
-          {onClose === undefined ? null : (
-            <Button variant="ghost" onClick={onClose}>
-              Close
-            </Button>
-          )}
-        </div>
-      </header>
-      {status === "idle" || status === "loading" ? (
-        <LoadingState label="Restoring session…" />
-      ) : status === "authenticated" ? (
-        <AutomationWorkspace source="in_page_panel" compact />
-      ) : (
-        <section className="af-card text-center">
-          <p className="af-muted mb-3">Log in before starting automation.</p>
-          <Button onClick={() => void openDashboard("/login")}>Open login</Button>
-        </section>
+      {message === null ? null : (
+        <p
+          className="fixed bottom-20 right-4 z-[2147483647] max-w-xs rounded-xl border bg-background p-3 text-sm text-foreground shadow-panel"
+          role="status"
+          style={{
+            position: "fixed",
+            right: "16px",
+            bottom: "80px",
+            zIndex: 2_147_483_647,
+            maxWidth: "320px",
+            background: "#ffffff",
+            color: "#172033",
+          }}
+        >
+          {message}
+        </p>
       )}
-    </aside>
+    </div>
   )
 }

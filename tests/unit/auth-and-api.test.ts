@@ -3,18 +3,15 @@ import { describe, expect, it, vi } from "vitest"
 
 import { ApiClient } from "~/api/client/ApiClient"
 import type { ApiTransport } from "~/api/client/contracts"
-import { createMockApiRuntime } from "~/api/mock/create-mock-api"
-import { AuthApiClient } from "~/api/modules/auth-api"
-import { DEMO_ACCOUNT } from "~/constants"
+import type { AuthApi } from "~/api/modules/auth-api"
 import { LuffyflowError } from "~/errors/luffyflow-error"
 import { Logger } from "~/logging/logger"
 import { authSessionSchema } from "~/schemas"
 import { AuthService } from "~/services/auth/auth-service"
-import { DelegatingAuthTokenProvider } from "~/services/auth/delegating-token-provider"
 import { VersionedStorageNamespace } from "~/storage/VersionedStorageNamespace"
 import { createAuthStore } from "~/stores/auth-store"
 
-import { fixedClock } from "../helpers/fixtures"
+import { fixedClock, fixedNow, ids } from "../helpers/fixtures"
 import { MemoryKeyValueStore } from "../helpers/memory"
 
 const logger = new Logger("test", {
@@ -24,10 +21,35 @@ const logger = new Logger("test", {
   clock: fixedClock,
 })
 
-describe("mock authentication and auth store", () => {
-  it("logs in through the persisted mock API and updates UI state", async () => {
+describe("authentication and auth store", () => {
+  it("keeps a new account signed out until its email is verified", async () => {
+    const sessionStorage = new VersionedStorageNamespace({
+      key: "test.signup-auth",
+      currentVersion: 1,
+      schema: authSessionSchema,
+      store: new MemoryKeyValueStore(),
+      now: fixedClock.now,
+    })
+    const api = {
+      signup: vi.fn(() =>
+        Promise.resolve({ verificationRequired: true as const, email: "new@example.com" }),
+      ),
+    } as unknown as AuthApi
+    const store = createAuthStore(new AuthService(api, sessionStorage, logger, fixedClock))
+
+    await store.getState().signup({
+      email: "new@example.com",
+      displayName: "New person",
+      password: "Secure-Password1!",
+    })
+
+    expect(store.getState()).toMatchObject({ status: "unauthenticated", session: null })
+    expect(store.getState().notice).toContain("verification link")
+    expect(await sessionStorage.get()).toBeNull()
+  })
+
+  it("persists an API login response and updates UI state", async () => {
     const values = new MemoryKeyValueStore()
-    const mock = createMockApiRuntime(values, { latencyMs: 0, failureRate: 0 }, fixedClock)
     const sessionStorage = new VersionedStorageNamespace({
       key: "test.auth",
       currentVersion: 1,
@@ -35,31 +57,41 @@ describe("mock authentication and auth store", () => {
       store: values,
       now: fixedClock.now,
     })
-    const tokenProvider = new DelegatingAuthTokenProvider()
-    const client = new ApiClient({
-      baseUrl: "https://mock.luffyflow.test",
-      defaultTimeoutMs: 5_000,
-      maximumSafeRetryCount: 2,
-      retryBaseDelayMs: 0,
-      transport: mock.transport,
-      tokenProvider,
-      logger,
-      random: () => 0,
-    })
-    const service = new AuthService(new AuthApiClient(client), sessionStorage, logger, fixedClock)
-    tokenProvider.setDelegate(service)
+    const credentials = { email: "person@example.com", password: "Secure-Password1!" }
+    const response = {
+      user: {
+        id: ids.user,
+        email: credentials.email,
+        displayName: "Person",
+        role: "user" as const,
+        status: "active" as const,
+        emailVerified: true,
+        createdAt: fixedNow.toISOString(),
+        updatedAt: fixedNow.toISOString(),
+      },
+      tokens: {
+        accessToken: "access-token-that-is-long-enough",
+        refreshToken: "refresh-token-that-is-long-enough",
+        expiresAt: new Date(fixedNow.getTime() + 60_000).toISOString(),
+      },
+    }
+    const api = {
+      login: vi.fn(() => Promise.resolve(response)),
+      logout: vi.fn(() => Promise.resolve()),
+    } as unknown as AuthApi
+    const service = new AuthService(api, sessionStorage, logger, fixedClock)
     const store = createAuthStore(service)
 
-    await store.getState().login(DEMO_ACCOUNT)
+    await store.getState().login(credentials)
 
     expect(store.getState().status).toBe("authenticated")
-    expect(store.getState().session?.user.email).toBe(DEMO_ACCOUNT.email)
+    expect(store.getState().session?.user.email).toBe(credentials.email)
     expect(await sessionStorage.get()).not.toBeNull()
 
     await store.getState().logout()
     expect(store.getState()).toMatchObject({ status: "unauthenticated", session: null })
     expect(await sessionStorage.get()).toBeNull()
-    mock.dispose()
+    expect(api.logout).toHaveBeenCalledOnce()
   })
 
   it("surfaces safe login errors in the store", async () => {
@@ -91,7 +123,7 @@ describe("API client error handling", () => {
       .mockResolvedValueOnce({ status: 503, headers: {}, bodyText: "{}" })
       .mockResolvedValueOnce({ status: 200, headers: {}, bodyText: '{"value":"ready"}' })
     const client = new ApiClient({
-      baseUrl: "https://api.luffyflow.test",
+      baseUrl: "https://api.luffyflow.test/api/v1",
       defaultTimeoutMs: 1_000,
       maximumSafeRetryCount: 1,
       retryBaseDelayMs: 0,
@@ -104,6 +136,14 @@ describe("API client error handling", () => {
       client.request({ method: "GET", path: "/health" }, z.object({ value: z.string() })),
     ).resolves.toEqual({ value: "ready" })
     expect(execute).toHaveBeenCalledTimes(2)
+    expect(execute).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ url: "https://api.luffyflow.test/api/v1/health" }),
+    )
+    const firstRequest = execute.mock.calls[0]?.[0]
+    expect(firstRequest?.headers["X-Request-Id"]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    )
   })
 
   it("does not retry an unsafe mutation and rejects invalid JSON", async () => {
@@ -124,6 +164,33 @@ describe("API client error handling", () => {
     await expect(
       client.request({ method: "POST", path: "/unsafe", body: { value: 1 } }, z.object({})),
     ).rejects.toMatchObject({ code: "API_RESPONSE_NOT_JSON", category: "invalid_data" })
+    expect(execute).toHaveBeenCalledOnce()
+  })
+
+  it("reads the production error envelope and classifies an empty token wallet", async () => {
+    const execute = vi.fn<ApiTransport["execute"]>().mockResolvedValue({
+      status: 402,
+      headers: {},
+      bodyText: JSON.stringify({
+        error: { code: "usage_limit", message: "Your token balance is empty." },
+      }),
+    })
+    const client = new ApiClient({
+      baseUrl: "https://api.luffyflow.test",
+      defaultTimeoutMs: 1_000,
+      maximumSafeRetryCount: 2,
+      retryBaseDelayMs: 0,
+      transport: { execute },
+      logger,
+    })
+
+    await expect(
+      client.request({ method: "GET", path: "/tokens/balance" }, z.object({})),
+    ).rejects.toMatchObject({
+      code: "usage_limit",
+      category: "usage_limit",
+      userMessage: "Your token balance is empty.",
+    })
     expect(execute).toHaveBeenCalledOnce()
   })
 })

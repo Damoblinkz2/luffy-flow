@@ -5,12 +5,12 @@ import { forgotPasswordRequestSchema, type ForgotPasswordRequest } from "~/schem
 
 import { useAuthStore } from "./AuthProvider"
 
-/** The owning page controls returning from the inline placeholder flow. */
+/** The owning page controls returning from the password-recovery flow. */
 export interface ForgotPasswordFormProps {
   onBack?: () => void
 }
 
-/** Placeholder flow avoids account enumeration and clearly identifies mock behavior. */
+/** Recovery requests preserve the backend's account-enumeration-safe response. */
 export const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
   const forgotPassword = useAuthStore((state) => state.forgotPassword)
   const status = useAuthStore((state) => state.status)
@@ -30,7 +30,9 @@ export const ForgotPasswordForm = ({ onBack }: ForgotPasswordFormProps) => {
 
   return (
     <form className="space-y-4" onSubmit={(event) => void handleSubmit(submit)(event)} noValidate>
-      <p className="text-sm">This development placeholder does not send real email.</p>
+      <p className="text-sm">
+        Enter your account email. If it exists, recovery instructions will be prepared securely.
+      </p>
       <div>
         <label className="mb-1 block text-sm font-medium" htmlFor="forgot-email">
           Email address

@@ -44,9 +44,8 @@ const createDefaultSettings = (config: PublicAppConfig, now: Date): LuffyflowSet
     sequenceScope: "global",
     autoSaveOutputs: true,
     autoDownloadOutputs: false,
+    mediaDownloadLocation: "default",
     theme: "system",
-    useMockApi: config.useMockApi,
-    backendBaseUrl: config.apiBaseUrl,
     debugLogging: config.appEnvironment === "development",
     privacyMode: true,
     platformAdapters: {

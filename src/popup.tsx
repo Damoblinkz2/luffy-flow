@@ -6,11 +6,11 @@ import { useAuthStore } from "~/components/auth/AuthProvider"
 import {
   ApplicationProviders,
   Badge,
+  BrandLogo,
   Button,
   EmptyState,
   ErrorBoundary,
   LoadingState,
-  ProgressBar,
 } from "~/components/common"
 import { useApplicationServices } from "~/components/common/ApplicationProviders"
 import { useActivePlatform } from "~/hooks/useActivePlatform"
@@ -28,7 +28,7 @@ const PopupBody = () => {
 
   useEffect(() => {
     if (status !== "authenticated" || session === null) return
-    if (services.billingStore.getState().subscription === null)
+    if (services.billingStore.getState().wallet === null)
       void services.billingStore.getState().load()
     let active = true
     void services.repositories.queue
@@ -75,10 +75,6 @@ const PopupBody = () => {
       />
     )
   }
-  const usagePercent =
-    billing.usage === null || billing.usage.limit === 0
-      ? 0
-      : (billing.usage.used / billing.usage.limit) * 100
   return (
     <div className="space-y-4">
       <section className="af-card">
@@ -123,17 +119,10 @@ const PopupBody = () => {
       </section>
       <section className="af-card">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-semibold">Subscription</h2>
-          <Badge>{billing.subscription?.planId ?? "loading"}</Badge>
+          <h2 className="font-semibold">Token balance</h2>
+          <Badge>{billing.wallet?.balance.toLocaleString() ?? "loading"}</Badge>
         </div>
-        {billing.usage === null ? (
-          <p className="af-muted">Loading usage…</p>
-        ) : (
-          <ProgressBar
-            value={usagePercent}
-            label={`${billing.usage.remaining} prompts remaining`}
-          />
-        )}
+        <p className="af-muted">One token is charged for each prompt sent.</p>
       </section>
       <nav className="grid grid-cols-2 gap-2" aria-label="Quick links">
         <Button variant="secondary" onClick={() => void openDashboard("/")}>
@@ -144,6 +133,9 @@ const PopupBody = () => {
         </Button>
         <Button variant="secondary" onClick={() => void openDashboard("/outputs")}>
           Output library
+        </Button>
+        <Button variant="secondary" onClick={() => void openDashboard("/tokens")}>
+          Buy tokens
         </Button>
         <Button variant="secondary" onClick={() => void openDashboard("/settings")}>
           Settings
@@ -159,7 +151,9 @@ const Popup = () => (
     <ApplicationProviders>
       <main className="w-[380px] p-4">
         <header className="mb-4">
-          <h1 className="text-xl font-bold text-primary">LuffyFlow</h1>
+          <h1>
+            <BrandLogo className="text-xl text-primary" />
+          </h1>
           <p className="text-xs text-foreground/60">Queue prompts. Track outputs.</p>
         </header>
         <PopupBody />

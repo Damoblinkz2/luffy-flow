@@ -7,6 +7,7 @@ import {
   type AuthSession,
   type LoginRequest,
   type SignupRequest,
+  type SignupResponse,
 } from "~/schemas/auth"
 import type { VersionedNamespace } from "~/storage/contracts"
 import type { Clock } from "~/utils/time"
@@ -31,9 +32,9 @@ export class AuthService implements AuthTokenProvider {
     this.clock = clock
   }
 
-  /** Creates an account and persists the returned authenticated session. */
-  async signup(request: SignupRequest): Promise<AuthSession> {
-    return this.persistResponse(await this.api.signup(request))
+  /** Creates an unverified account; no session is persisted until its email is verified. */
+  async signup(request: SignupRequest): Promise<SignupResponse> {
+    return this.api.signup(request)
   }
 
   /** Authenticates credentials and replaces any locally cached session. */
@@ -41,7 +42,7 @@ export class AuthService implements AuthTokenProvider {
     return this.persistResponse(await this.api.login(request))
   }
 
-  /** Local logout always succeeds even when the mock/remote endpoint is unavailable. */
+  /** Local logout always succeeds even when the remote endpoint is unavailable. */
   async logout(): Promise<void> {
     try {
       if ((await this.ensureHydrated()) !== null) await this.api.logout()

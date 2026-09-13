@@ -257,6 +257,20 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
             <option value="json">JSON</option>
             <option value="csv">CSV</option>
           </SelectField>
+          <div>
+            <SelectField
+              id="media-download-location"
+              label="Image and media download location"
+              {...register("mediaDownloadLocation")}
+            >
+              <option value="default">Browser Downloads folder</option>
+              <option value="choose_folder">Choose a folder for every media download</option>
+            </SelectField>
+            <p className="mt-1 text-xs text-foreground/60">
+              Browsers protect your files: choosing a folder opens the native Save As picker for
+              each image, video, audio, or file download.
+            </p>
+          </div>
         </section>
 
         <section className="af-card grid gap-4 md:grid-cols-2" aria-labelledby="appearance-privacy">
@@ -275,33 +289,6 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" {...register("debugLogging")} /> Enable debug logging
           </label>
-        </section>
-
-        <section className="af-card grid gap-4 md:grid-cols-2" aria-labelledby="backend-settings">
-          <h2 id="backend-settings" className="text-lg font-semibold md:col-span-2">
-            Backend
-          </h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register("useMockApi")} /> Use development mock API
-          </label>
-          <div className="md:col-span-2">
-            <label className="af-label" htmlFor="backend-url">
-              Backend base URL
-            </label>
-            <input
-              id="backend-url"
-              type="url"
-              className="af-field"
-              {...register("backendBaseUrl")}
-            />
-            {errors.backendBaseUrl?.message === undefined ? null : (
-              <p className="text-sm text-danger">{errors.backendBaseUrl.message}</p>
-            )}
-            <p className="mt-1 text-xs text-foreground/60">
-              Environment configuration still controls the current service graph until the surface
-              reloads.
-            </p>
-          </div>
         </section>
 
         <section className="space-y-4" aria-labelledby="adapter-settings">
@@ -372,8 +359,8 @@ export const SettingsPage = ({ source = "dashboard" }: { source?: "dashboard" | 
           Local data
         </h2>
         <p className="af-muted my-2">
-          Clearing removes mock sessions, settings, queues, prompts, outputs, and sequence counters
-          from this browser profile.
+          Clearing removes the local session, settings, queues, prompts, outputs, and sequence
+          counters from this browser profile. It does not delete the server account.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => void exportLocalData()}>

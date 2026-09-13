@@ -1,9 +1,8 @@
 import { ApiClient } from "~/api/client/ApiClient"
 import type { ApiTransport } from "~/api/client/contracts"
-import { createMockApiRuntime, type MockApiRuntime } from "~/api/mock/create-mock-api"
 import { AuthApiClient } from "~/api/modules/auth-api"
 import { BillingApiClient } from "~/api/modules/billing-api"
-import { UsageApiClient } from "~/api/modules/usage-api"
+import { TokenApiClient } from "~/api/modules/token-api"
 import { HttpTransport } from "~/api/transports/HttpTransport"
 import { DEFAULT_API_RETRY_BASE_DELAY_MS, DEFAULT_API_RETRY_COUNT } from "~/constants"
 import { readPublicAppConfig, type PublicAppConfig } from "~/config/env"
@@ -11,7 +10,7 @@ import { Logger } from "~/logging/logger"
 import { AuthService } from "~/services/auth/auth-service"
 import { createAuthSessionStorage } from "~/services/auth/create-auth-storage"
 import { DelegatingAuthTokenProvider } from "~/services/auth/delegating-token-provider"
-import { SubscriptionService } from "~/services/billing/subscription-service"
+import { TokenBillingService } from "~/services/billing/token-billing-service"
 import { OutputNamingService } from "~/services/naming/OutputNamingService"
 import { OutputCaptureService } from "~/services/outputs/OutputCaptureService"
 import { PromptImportService } from "~/services/prompts/PromptImportService"
@@ -29,7 +28,7 @@ export interface ApplicationServices {
   config: PublicAppConfig
   logger: Logger
   authService: AuthService
-  subscriptionService: SubscriptionService
+  tokenBillingService: TokenBillingService
   promptImportService: PromptImportService
   queueService: QueueService
   outputCaptureService: OutputCaptureService
@@ -48,7 +47,7 @@ export interface ApplicationServiceOptions {
   logger?: Logger
 }
 
-/** One composition root wires either the persisted mock API or a real HTTP transport. */
+/** One composition root wires every runtime surface to the configured HTTP API. */
 export const createApplicationServices = (
   options: ApplicationServiceOptions = {},
 ): ApplicationServices => {
@@ -61,9 +60,14 @@ export const createApplicationServices = (
       privacyMode: true,
     })
 
-  // A supplied transport wins for tests; otherwise mock mode is selected only by public config.
-  const mockRuntime = createConfiguredMockRuntime(options.transport, config, keyValueStore)
-  const transport = options.transport ?? mockRuntime?.transport ?? new HttpTransport()
+  // Tests may inject a deterministic transport; production always uses the real fetch boundary.
+  const transport = options.transport ?? new HttpTransport()
+  // Remove obsolete seeded-development state when an existing installation upgrades.
+  void Promise.all([
+    keyValueStore.remove("luffyflow:auth"),
+    keyValueStore.remove("luffyflow:mock-api"),
+    keyValueStore.remove("luffyflow:mock-api-v2"),
+  ]).catch((error: unknown) => logger.warn("Legacy development state could not be removed.", error))
   const tokenProvider = new DelegatingAuthTokenProvider()
   const apiClient = new ApiClient({
     baseUrl: config.apiBaseUrl,
@@ -82,9 +86,9 @@ export const createApplicationServices = (
   )
   tokenProvider.setDelegate(authService)
 
-  const subscriptionService = new SubscriptionService(
+  const tokenBillingService = new TokenBillingService(
     new BillingApiClient(apiClient),
-    new UsageApiClient(apiClient),
+    new TokenApiClient(apiClient),
   )
   const repositories = createLocalRepositories(keyValueStore)
   const settingsRepository = createSettingsRepository(keyValueStore, config)
@@ -95,7 +99,6 @@ export const createApplicationServices = (
     repositories.outputs,
     namingService,
     queueService,
-    subscriptionService,
     async () => {
       const settings = await settingsRepository.get()
       return {
@@ -111,30 +114,16 @@ export const createApplicationServices = (
     config,
     logger,
     authService,
-    subscriptionService,
+    tokenBillingService,
     promptImportService: new PromptImportService(),
     queueService,
     outputCaptureService,
     repositories,
     settingsRepository,
     authStore: createAuthStore(authService),
-    billingStore: createBillingStore(subscriptionService),
+    billingStore: createBillingStore(tokenBillingService),
     dispose: () => {
-      mockRuntime?.dispose()
       repositories.close()
     },
   }
-}
-
-/** Custom transports bypass mock registration so tests control every request deterministically. */
-const createConfiguredMockRuntime = (
-  customTransport: ApiTransport | undefined,
-  config: PublicAppConfig,
-  keyValueStore: KeyValueStore,
-): MockApiRuntime | null => {
-  if (customTransport !== undefined || !config.useMockApi) return null
-  return createMockApiRuntime(keyValueStore, {
-    latencyMs: config.mockApiLatencyMs,
-    failureRate: config.mockApiFailureRate,
-  })
 }

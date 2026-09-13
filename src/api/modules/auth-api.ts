@@ -9,13 +9,19 @@ import {
   type LoginRequest,
   type RefreshTokenRequest,
   type SignupRequest,
+  type SignupResponse,
+  signupResponseSchema,
   type User,
   userSchema,
 } from "~/schemas/auth"
 
-/** Auth contract isolates session workflows from both HTTP and mock transports. */
+// Password hashing and remote MongoDB transaction commits can legitimately
+// exceed the shorter timeout used for ordinary reads on development networks.
+const CREDENTIAL_OPERATION_TIMEOUT_MS = 60_000
+
+/** Auth contract isolates session workflows from the concrete HTTP client. */
 export interface AuthApi {
-  signup(request: SignupRequest): Promise<AuthResponse>
+  signup(request: SignupRequest): Promise<SignupResponse>
   login(request: LoginRequest): Promise<AuthResponse>
   logout(): Promise<void>
   refresh(request: RefreshTokenRequest): Promise<AuthResponse>
@@ -27,16 +33,28 @@ export interface AuthApi {
 export class AuthApiClient implements AuthApi {
   constructor(private readonly client: TypedApiClient) {}
 
-  signup(request: SignupRequest): Promise<AuthResponse> {
+  signup(request: SignupRequest): Promise<SignupResponse> {
     return this.client.request(
-      { method: "POST", path: "/auth/signup", body: request, authentication: "omit" },
-      authResponseSchema,
+      {
+        method: "POST",
+        path: "/auth/signup",
+        body: request,
+        authentication: "omit",
+        timeoutMs: CREDENTIAL_OPERATION_TIMEOUT_MS,
+      },
+      signupResponseSchema,
     )
   }
 
   login(request: LoginRequest): Promise<AuthResponse> {
     return this.client.request(
-      { method: "POST", path: "/auth/login", body: request, authentication: "omit" },
+      {
+        method: "POST",
+        path: "/auth/login",
+        body: request,
+        authentication: "omit",
+        timeoutMs: CREDENTIAL_OPERATION_TIMEOUT_MS,
+      },
       authResponseSchema,
     )
   }

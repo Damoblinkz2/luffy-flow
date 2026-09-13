@@ -5,13 +5,15 @@
 **Extension framework:** Plasmo, React, and strict TypeScript  
 **Document date:** 2026-07-31
 
+> Implementation update (2026-09-11): this is the original Stage 1 design record. The current runtime has no seeded API or alternate development data path: authentication and prepaid token billing use the standalone backend over HTTP(S). Superseded subscription and transport examples below are historical; see `docs/stage-4-authentication-and-billing.md` and the source schemas for the implemented contracts.
+
 ## 1. Scope and product boundaries
 
 LuffyFlow is a browser extension that helps an authenticated user prepare a queue of prompts, submit those prompts through the visible interfaces of Google Flow, Google Gemini, Grok, and Meta AI, detect the resulting outputs, and organize or download the output records.
 
 The extension automates only actions that an authenticated user can perform in the visible website UI. It will not bypass authentication, CAPTCHAs, rate limits, signed-URL restrictions, cross-origin protections, platform permissions, or anti-bot systems. Rate-limit or service-unavailable signals pause the queue and require the user to decide when it is safe to resume.
 
-The first implementation uses mock authentication, billing, usage, and record APIs behind replaceable interfaces. Mock credentials and mock payment state are development conveniences, not production security or a real checkout system.
+The implemented extension uses backend authentication and a prepaid token wallet behind typed API interfaces. Tests use dependency-injected test doubles that are never selected by production code.
 
 ### 1.1 Stage boundary
 
@@ -29,7 +31,7 @@ All prompt sources enter one shared validation and normalization pipeline:
 
 `.txt` upload is a first-class workflow, not a fallback. The side panel and dashboard prompt composer both expose an accessible file picker and drag-and-drop target. Importing never starts automation automatically: the user can review, edit, reorder, or remove parsed prompts before adding them to the queue.
 
-Files are parsed locally and are not uploaded to the mock or real backend merely by selecting them. The initial safe limit is 2 MiB per import and 1,000 prompts per batch; both limits will be named constants. Invalid rows produce actionable diagnostics without silently discarding valid rows. A UTF-8 byte-order mark is removed, CRLF and CR line endings are normalized, whitespace-only lines are ignored, and duplicate prompts are retained because repetition can be intentional.
+Files are parsed locally and are not uploaded to the backend merely by selecting them. The initial safe limit is 2 MiB per import and 1,000 prompts per batch; both limits will be named constants. Invalid rows produce actionable diagnostics without silently discarding valid rows. A UTF-8 byte-order mark is removed, CRLF and CR line endings are normalized, whitespace-only lines are ignored, and duplicate prompts are retained because repetition can be intentional.
 
 ## 2. Key technical decisions
 
@@ -62,7 +64,7 @@ Domain models, schemas, and ports
                 ▲
                 │
 Infrastructure adapters
-(Plasmo Storage, IndexedDB, Chrome APIs, mock/HTTP transports, page DOM)
+(Plasmo Storage, IndexedDB, Chrome APIs, HTTP transport, page DOM)
 ```
 
 Domain and application modules do not import browser globals, React, Plasmo entry points, or platform-specific selectors. Browser APIs, persistence engines, API transports, and page automation implement interfaces defined in the inner layers and are injected at composition roots.
@@ -111,7 +113,7 @@ React Hook Form manages forms. Zod schemas are the single runtime-validation bou
 | Prompt and output metadata      | IndexedDB, with a repository facade        | Can grow beyond storage-local comfort       |
 | Large binary output content     | Not stored in extension sync/local storage | Download by permitted URL or transient Blob |
 
-All namespaces include a schema version. Migrations are forward-only, idempotent, and backed up before destructive shape changes. Plasmo Storage wraps extension storage; an IndexedDB adapter handles larger record collections. A mock remote repository and future HTTP repository implement the same record ports.
+All namespaces include a schema version. Migrations are forward-only, idempotent, and backed up before destructive shape changes. Plasmo Storage wraps extension storage; an IndexedDB adapter handles larger record collections. The standalone API owns account, payment, wallet, and optional remote-sync data.
 
 ### 2.7 Output identity and conflict handling
 
@@ -175,8 +177,7 @@ flowchart LR
   subgraph Infra["Infrastructure"]
     Local["Plasmo extension storage"]
     IDB["IndexedDB"]
-    Mock["Mock API transport"]
-    HTTP["Future HTTP transport"]
+    HTTP["HTTP API transport"]
     Downloads["Chromium downloads API"]
   end
 
@@ -192,8 +193,7 @@ flowchart LR
   Registry --> Grok
   Ports --> Local
   Ports --> IDB
-  Ports --> Mock
-  Ports -. production .-> HTTP
+  Ports --> HTTP
   Worker --> Downloads
 ```
 
@@ -293,10 +293,6 @@ luffyflow/
 │  │  ├─ client/
 │  │  │  ├─ ApiClient.ts
 │  │  │  └─ contracts.ts
-│  │  ├─ mock/
-│  │  │  ├─ MockTransport.ts
-│  │  │  ├─ handlers.ts
-│  │  │  └─ seed.ts
 │  │  ├─ transports/
 │  │  │  └─ HttpTransport.ts
 │  │  └─ modules/
@@ -360,7 +356,7 @@ luffyflow/
 │     └─ globals.css
 └─ tests/
    ├─ setup.ts
-   ├─ mocks/
+   ├─ helpers/
    │  └─ browser.ts
    ├─ unit/
    └─ integration/
@@ -441,30 +437,24 @@ interface AuthSession {
   restoredAt?: IsoDateTime
 }
 
-type PlanId = "free" | "pro" | "business"
-type BillingStatus = "active" | "trialing" | "past_due" | "cancelled"
-
-interface Subscription {
-  id: EntityId
+interface TokenWallet {
   userId: EntityId
-  planId: PlanId
-  billingStatus: BillingStatus
-  monthlyLimit: number
-  currentPeriodStart: IsoDateTime
-  currentPeriodEnd: IsoDateTime
-  cancelAtPeriodEnd: boolean
-  provider: "mock"
+  balance: number
+  lifetimePurchased: number
+  lifetimeSpent: number
+  lowBalanceReminder: {
+    enabled: boolean
+    threshold: number
+    lastSentAt?: IsoDateTime
+  }
   updatedAt: IsoDateTime
 }
 
-interface Usage {
-  userId: EntityId
-  periodStart: IsoDateTime
-  periodEnd: IsoDateTime
-  used: number
-  limit: number
-  remaining: number
-  updatedAt: IsoDateTime
+interface TokenPack {
+  id: "starter" | "value" | "power"
+  tokens: number
+  priceNgnMinor: number
+  priceUsd: number
 }
 ```
 
@@ -643,8 +633,6 @@ interface LuffyFlowSettings {
   autoSaveOutputs: boolean
   autoDownloadOutputs: boolean
   theme: ThemePreference
-  useMockApi: boolean
-  backendBaseUrl: string
   debugLogging: boolean
   privacyMode: boolean
   platformAdapters: Record<SupportedPlatform, PlatformAdapterSettings>
@@ -1130,46 +1118,42 @@ interface AuthApi {
 }
 ```
 
-The mock service accepts the development account `demo@luffyflow.local` / `Demo123!`, simulates latency and errors, and never persists the submitted password. Stage 9 will clearly label this account as development-only.
+The API creates and verifies real accounts. The extension ships no seeded credentials and persists only the authenticated session tokens returned by the backend.
 
 ### 11.3 Billing and usage APIs
 
 ```ts
 interface CheckoutRequest {
-  planId: Exclude<PlanId, "free">
+  packId: "starter" | "value" | "power"
+  gateway: "paystack" | "crypto"
   returnUrl: string
+  payCurrency?: string
 }
 
 interface CheckoutResult {
-  provider: "mock"
-  status: "completed"
+  provider: "paystack" | "nowpayments"
+  status: "pending"
+  paymentId: EntityId
+  packId: "starter" | "value" | "power"
+  tokenAmount: number
   checkoutReference: string
+  checkoutUrl?: string
 }
 
 interface BillingApi {
-  getSubscription(): Promise<Subscription>
+  listTokenPacks(): Promise<TokenPack[]>
   checkout(request: CheckoutRequest): Promise<CheckoutResult>
-  changePlan(planId: PlanId): Promise<Subscription>
-  cancel(): Promise<Subscription>
-  listInvoices(page: PageRequest): Promise<PageResult<InvoicePlaceholder>>
+  listPurchases(): Promise<PurchaseRecord[]>
 }
 
-interface InvoicePlaceholder {
-  id: EntityId
-  date: IsoDateTime
-  description: string
-  amountMinor: number
-  currency: string
-  status: "paid" | "open" | "void"
-}
-
-interface UsageApi {
-  getUsage(): Promise<Usage>
-  increment(idempotencyKey: string): Promise<Usage>
+interface TokenApi {
+  getBalance(): Promise<TokenWallet>
+  debit(promptId: EntityId, attempt: number): Promise<TokenWallet>
+  updateReminder(enabled: boolean, threshold: number): Promise<TokenWallet>
 }
 ```
 
-No card forms or card data exist in LuffyFlow. A future payment provider adapter will redirect to a hosted checkout.
+No card forms or card data exist in LuffyFlow. Paystack and NOWPayments integrations redirect to hosted checkout pages, and the backend verifies payment completion before crediting tokens.
 
 ### 11.4 Record, settings, and sync APIs
 
@@ -1329,17 +1313,17 @@ Google Flow's canonical production origin must be verified during Stage 6; the l
 
 Backend host permission strategy:
 
-- Mock mode requires no network host permission.
-- A production build declares its fixed API origin from the build environment.
-- A user-entered non-default backend URL requires a user-initiated optional host-permission request, if supported by the selected Plasmo/Chromium configuration.
-- LuffyFloww never requests `<all_urls>`.
+- Development grants only the local backend origin.
+- A production build declares its fixed HTTPS API origin from the build environment and manifest.
+- The backend URL is not user-editable, preventing bearer tokens from being redirected to an arbitrary server.
+- LuffyFlow never requests `<all_urls>`.
 
 Content scripts run only on declared supported origins. The extension CSP uses packaged scripts only and forbids `eval` and remote executable code.
 
 ## 16. Security and privacy design
 
 - All imported files, forms, stored records, API responses, and runtime messages are runtime-validated.
-- Passwords are transient request values; mock storage contains only a synthetic account verifier/seed representation, never a submitted plaintext password.
+- Passwords are transient request values; the backend persists only production password hashes, never submitted plaintext passwords.
 - Logs redact access tokens, refresh tokens, passwords, authorization headers, cookies, and prompt/output content when privacy mode is enabled.
 - URLs are parsed with `URL`, restricted to `https:` for remote downloads, and checked against the expected platform/backend origin where relevant.
 - React renders plain text. No raw HTML injection or `dangerouslySetInnerHTML` is used for platform output.
@@ -1369,34 +1353,34 @@ It never provides a mechanism to execute arbitrary selectors or JavaScript suppl
 
 Stage 8 will contain:
 
-- Unit tests for auth store restoration, mock auth behavior, API-client error mapping, Zod schemas, message validation, repository concurrency, import parsers (including `.txt` BOM and line-ending cases), filename sanitization, sequence allocation, renaming, adapter URL matching, resilient DOM utilities, and download planning.
+- Unit tests for auth store restoration, injected API responses, API-client error mapping, Zod schemas, message validation, repository concurrency, import parsers (including `.txt` BOM and line-ending cases), filename sanitization, sequence allocation, renaming, adapter URL matching, resilient DOM utilities, token billing, and download planning.
 - State-machine tests for start, pause, resume, stop, skip, retry limits, rate-limit pause, and worker-recovery transitions.
 - React Testing Library tests for accessible forms, import preview, destructive confirmations, queue controls, and protected routes.
-- Repository contract tests run against local and mock remote implementations.
-- An integration-style test: mock login → `.txt` prompt import/add → queue start → mock adapter output → persisted output → sequence filename → mocked download completion.
+- Repository contract tests run against deterministic local implementations.
+- An integration-style test covers `.txt` prompt import/add, queue start, deterministic adapter output, persisted output, sequence naming, and simulated download completion.
 - Browser API mocks for runtime messaging, storage, tabs, alarms, side panel, and downloads.
 
 Live platform end-to-end tests are explicitly out of scope until stable test accounts, verified selectors, and allowed test environments exist.
 
 ## 19. Risks, mitigations, and assumptions
 
-| Risk / assumption                                             | Impact                                                       | Mitigation                                                                                                       |
-| ------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Live platform DOM is unverified and changes without notice    | Submission or output detection can fail                      | Adapter isolation, semantic fallback selectors, health checks, fixtures, versioning, maintenance guide           |
-| Platform terms may constrain automation                       | Feature availability may need narrowing                      | User-visible normal actions only; no bypass behavior; document platform limitations                              |
-| MV3 workers suspend unpredictably                             | In-memory timers and locks disappear                         | Persist every transition, storage lease, alarms as hints, conservative recovery                                  |
-| Content scripts cannot access page-private framework state    | Some controls need specific native events                    | Use visible DOM and native setters/events only; never inject remote or privileged code                           |
-| Signed media URLs expire or reject downloads                  | Media downloads can fail later                               | Download promptly only when enabled, preserve metadata, show actionable expired/permission errors                |
-| CORS prevents fetching media for ZIP                          | Cross-origin media cannot be bundled                         | Use downloads API for accessible URLs; ZIP only locally available text/Blob content                              |
-| Extension storage is not transactional across all contexts    | Duplicate starts or sequence races                           | Revision checks, lease generations, idempotency keys, serialized background allocation                           |
-| User-supplied selector overrides can target the wrong UI      | Incorrect submission or unsafe interaction                   | Advanced warning, schema/length limits, health preview, reset action, no arbitrary script                        |
-| User-entered API origin is absent from manifest permissions   | Real API requests fail                                       | Fixed production origin or explicit optional-permission request                                                  |
-| Mock API local state differs from a real multi-device backend | Sync behavior is not production-equivalent                   | Repository/API ports, outbox metadata, documented replacement contracts                                          |
-| Plaintext prompt records are privacy-sensitive                | Local compromise exposes content                             | Privacy mode/log redaction, clear/export controls, retention settings later; never claim encrypted vault storage |
-| `.txt` uses one prompt per non-empty line                     | Multiline prompts cannot be represented unambiguously in TXT | Use JSON/CSV for multiline prompts; editor supports manual multiline single-prompt mode                          |
-| 2 MiB / 1,000 prompt defaults may be too low for some users   | Large imports are rejected                                   | Named validated limits, clear diagnostics, future settings after performance testing                             |
-| Exact Google Flow origin is provisional                       | Manifest match may be incomplete                             | Verify in Stage 6 before claiming live support                                                                   |
-| Firefox compatibility is not guaranteed                       | Porting requires work                                        | Keep browser API access behind ports, but advertise Chromium support only                                        |
+| Risk / assumption                                           | Impact                                                       | Mitigation                                                                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Live platform DOM is unverified and changes without notice  | Submission or output detection can fail                      | Adapter isolation, semantic fallback selectors, health checks, fixtures, versioning, maintenance guide           |
+| Platform terms may constrain automation                     | Feature availability may need narrowing                      | User-visible normal actions only; no bypass behavior; document platform limitations                              |
+| MV3 workers suspend unpredictably                           | In-memory timers and locks disappear                         | Persist every transition, storage lease, alarms as hints, conservative recovery                                  |
+| Content scripts cannot access page-private framework state  | Some controls need specific native events                    | Use visible DOM and native setters/events only; never inject remote or privileged code                           |
+| Signed media URLs expire or reject downloads                | Media downloads can fail later                               | Download promptly only when enabled, preserve metadata, show actionable expired/permission errors                |
+| CORS prevents fetching media for ZIP                        | Cross-origin media cannot be bundled                         | Use downloads API for accessible URLs; ZIP only locally available text/Blob content                              |
+| Extension storage is not transactional across all contexts  | Duplicate starts or sequence races                           | Revision checks, lease generations, idempotency keys, serialized background allocation                           |
+| User-supplied selector overrides can target the wrong UI    | Incorrect submission or unsafe interaction                   | Advanced warning, schema/length limits, health preview, reset action, no arbitrary script                        |
+| User-entered API origin is absent from manifest permissions | Real API requests fail                                       | Fixed production origin or explicit optional-permission request                                                  |
+| Local prompt/output records are not yet synchronized        | Records do not follow users to another browser               | Complete and validate the documented sync API before claiming multi-device behavior                              |
+| Plaintext prompt records are privacy-sensitive              | Local compromise exposes content                             | Privacy mode/log redaction, clear/export controls, retention settings later; never claim encrypted vault storage |
+| `.txt` uses one prompt per non-empty line                   | Multiline prompts cannot be represented unambiguously in TXT | Use JSON/CSV for multiline prompts; editor supports manual multiline single-prompt mode                          |
+| 2 MiB / 1,000 prompt defaults may be too low for some users | Large imports are rejected                                   | Named validated limits, clear diagnostics, future settings after performance testing                             |
+| Exact Google Flow origin is provisional                     | Manifest match may be incomplete                             | Verify in Stage 6 before claiming live support                                                                   |
+| Firefox compatibility is not guaranteed                     | Porting requires work                                        | Keep browser API access behind ports, but advertise Chromium support only                                        |
 
 ## 20. Implementation invariants
 
@@ -1429,5 +1413,5 @@ The following rules must remain true in later stages:
 - Stage 1 intentionally includes documentation contracts rather than compilable TypeScript modules; those begin in Stage 3 after Stage 2 establishes toolchain versions and configuration.
 - Google Flow, Gemini, Grok, and Meta AI selectors and exact supported routes have not been live-verified.
 - `.txt` import is defined as one non-empty line per prompt. JSON or CSV should be used for prompts that contain embedded line breaks.
-- Mock authentication, subscription, checkout, and remote sync are development placeholders.
+- Authentication and token checkout use the backend; authenticated live adapter verification, deployment configuration, and remote prompt/output sync remain release work.
 - Only Chromium browsers are in the supported target for the initial release.

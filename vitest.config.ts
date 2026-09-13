@@ -27,7 +27,10 @@ export default defineConfig({
     unstubEnvs: true,
     unstubGlobals: true,
     pool: "threads",
-    maxWorkers: 2,
+    // A single worker avoids sporadic Windows worker-start timeouts while keeping
+    // isolated test files deterministic across local and CI environments.
+    fileParallelism: false,
+    maxWorkers: 1,
     testTimeout: 15_000,
     hookTimeout: 15_000,
     passWithNoTests: false,

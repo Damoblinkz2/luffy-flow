@@ -31,6 +31,10 @@ export interface BackgroundQueueCoordinatorOptions {
   outputCapture: OutputCaptureService
   getAuthenticatedUserId(): Promise<string>
   authorizeStart(): Promise<string>
+  /** Rechecks balance before claiming each prompt so an exhausted wallet pauses safely. */
+  authorizePrompt(): Promise<void>
+  /** Debits exactly one token after the page confirms a prompt was submitted. */
+  debitPrompt(promptId: string, attempt: number): Promise<void>
   getSettings(): Promise<LuffyflowSettings>
   createContentClient(tabId: number): TypedMessageClient
   publishQueue(queue: QueueState): Promise<void>
@@ -201,7 +205,10 @@ export class BackgroundQueueCoordinator {
             userMessage: "The content script cannot apply that prompt status.",
           })
         }
-        return this.options.queueService.markWaiting(message.payload.promptId)
+        const prompt = await this.options.prompts.getById(message.payload.promptId)
+        if (prompt === null) throw ownershipError()
+        await this.options.debitPrompt(prompt.id, prompt.retryCount)
+        return this.options.queueService.markWaiting(prompt.id)
       }),
       router.register("output/detected", ["content"], async (message, sender) => {
         await this.verifyContentSender(message.payload.promptId, sender)
@@ -282,6 +289,25 @@ export class BackgroundQueueCoordinator {
         queue.lease === undefined ||
         queue.lease.ownerId !== this.ownerId
       ) {
+        return
+      }
+      // Wallet state is authoritative and is checked immediately before each new send.
+      try {
+        await this.options.authorizePrompt()
+      } catch (error) {
+        const normalized = toLuffyflowError(error, {
+          code: "TOKEN_BALANCE_EMPTY",
+          category: "usage_limit",
+          userMessage: "Your token balance is empty. Recharge to continue.",
+          recoverable: true,
+        })
+        const paused = await this.options.queueService.pause(
+          queue.id,
+          queue.revision,
+          this.ownerId,
+          normalized.userMessage,
+        )
+        await this.options.publishQueue(paused)
         return
       }
       const prompt = await this.options.queueService.claimNext(
