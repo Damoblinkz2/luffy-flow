@@ -72,7 +72,7 @@ Use dedicated test accounts and non-sensitive prompts. Record browser version, a
 
 ### Google Flow
 
-- [ ] Verify `https://flow.google/` redirect behavior.
+- [ ] Verify `https://flow.google/` redirects to `https://flow.google.com/` and the launcher appears.
 - [ ] Verify supported Labs Flow routes and locale variants.
 - [ ] Verify authentication-required detection.
 - [ ] Verify prompt input discovery and text entry.

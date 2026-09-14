@@ -20,6 +20,14 @@ const fallback = (query: string, assumption: string) => ({
 export const googleFlowSelectors = {
   promptInput: [
     provisional(
+      "#PINHOLE_TEXT_AREA_ELEMENT_ID",
+      "Flow's current standard-generation prompt bar exposes this stable element ID.",
+    ),
+    provisional(
+      'textarea[placeholder*="generate a video" i], textarea[aria-label*="generate a video" i]',
+      "Flow may label its standard prompt textarea by the video-generation action.",
+    ),
+    provisional(
       'textarea[aria-label*="prompt" i]',
       "Flow may label its prompt textarea semantically.",
     ),
@@ -27,9 +35,21 @@ export const googleFlowSelectors = {
       '[contenteditable="true"][role="textbox"][aria-label*="prompt" i]',
       "Flow may expose a rich prompt textbox.",
     ),
+    provisional(
+      'textarea[placeholder*="prompt" i], textarea[placeholder*="describe" i]',
+      "Flow may expose its prompt field through an English placeholder instead of an aria label.",
+    ),
+    fallback(
+      '[contenteditable="true"][role="textbox"]',
+      "Flow may provide an unlabeled rich-text prompt editor.",
+    ),
     fallback(
       'main textarea[placeholder*="describe" i]',
       "English placeholder text may identify the generation prompt.",
+    ),
+    fallback(
+      "main textarea:not([disabled])",
+      "The visible editor may be an unlabeled textarea on the Flow workspace.",
     ),
   ],
   submitButton: [
@@ -44,6 +64,10 @@ export const googleFlowSelectors = {
     fallback(
       'main button[aria-label*="create" i]',
       "An accessible Create control may submit in editor routes.",
+    ),
+    fallback(
+      'main button[aria-label*="video" i], main button[aria-label*="image" i]',
+      "Flow may label a creation control by the output format rather than Generate.",
     ),
   ],
   stopButton: [

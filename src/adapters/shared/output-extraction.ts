@@ -1,5 +1,10 @@
 import type { DetectedOutput, OutputType } from "~/schemas"
 
+// Gemini does not reliably expose a server message ID for every response. A node-local ID keeps
+// two identical visible answers distinct while their text streams and across queue submissions.
+const responseNodeIds = new WeakMap<HTMLElement, string>()
+let nextResponseNodeId = 1
+
 /** Media extraction reads only already-rendered URLs and never fetches or bypasses signed resources. */
 export const detectMediaOutput = (root: HTMLElement): DetectedOutput | null => {
   const media = firstSelfOrDescendant(root, "video, audio, img, a[download]")
@@ -26,6 +31,7 @@ export const detectMediaOutput = (root: HTMLElement): DetectedOutput | null => {
       ? media.duration
       : undefined
   const platformOutputId = outputId(root)
+  const fingerprintIdentity = platformOutputId ?? responseNodeId(root)
   const rawTitle = media.getAttribute("aria-label") ?? undefined
   const detectedTitle = rawTitle === undefined ? undefined : rawTitle.slice(0, 1_000)
   const detectedMimeType = declaredMimeType(media) ?? mimeType(sourceUrl, type)
@@ -44,23 +50,28 @@ export const detectMediaOutput = (root: HTMLElement): DetectedOutput | null => {
       ...(durationSeconds === undefined ? {} : { durationSeconds }),
     },
     ...(platformOutputId === undefined ? {} : { platformOutputId }),
-    fingerprintSource: `${platformOutputId ?? "media"}:${sourceUrl}`.slice(0, 16_384),
+    fingerprintSource: `${fingerprintIdentity}:${sourceUrl}`.slice(0, 16_384),
     detectedAt: new Date().toISOString(),
   }
 }
 
 /** Text extraction deliberately scopes content to the adapter-selected response container. */
 export const detectTextOutput = (root: HTMLElement): DetectedOutput | null => {
+  // A response card can include a caption alongside a generated file. Prefer the source URL so
+  // the output is stored and downloaded as its native image, video, audio, or file—not Markdown.
+  const mediaOutput = detectMediaOutput(root)
+  if (mediaOutput !== null) return mediaOutput
   const textContent = normalizeText(root.innerText || root.textContent || "").slice(0, 5_000_000)
-  if (textContent.length === 0) return detectMediaOutput(root)
+  if (textContent.length === 0) return null
   const platformOutputId = outputId(root)
+  const fingerprintIdentity = platformOutputId ?? responseNodeId(root)
   const identity = normalizeText(textContent).slice(0, 15_000)
   return {
     type: "text",
     textContent,
     metadata: {},
     ...(platformOutputId === undefined ? {} : { platformOutputId }),
-    fingerprintSource: `${platformOutputId ?? "text"}:${identity}`.slice(0, 16_384),
+    fingerprintSource: `${fingerprintIdentity}:${identity}`.slice(0, 16_384),
     detectedAt: new Date().toISOString(),
   }
 }
@@ -103,6 +114,16 @@ const outputId = (element: HTMLElement): string | undefined => {
   const value =
     owning?.dataset.messageId ?? owning?.dataset.outputId ?? owning?.dataset.id ?? undefined
   return value === undefined || value.length === 0 ? undefined : value.slice(0, 512)
+}
+
+/** Allocates a stable page-lifetime fallback identity only when the platform omits a message ID. */
+const responseNodeId = (element: HTMLElement): string => {
+  const existing = responseNodeIds.get(element)
+  if (existing !== undefined) return existing
+  const created = `response-node-${nextResponseNodeId}`
+  nextResponseNodeId += 1
+  responseNodeIds.set(element, created)
+  return created
 }
 
 /** Accepts only downloadable HTTP(S) URLs and discards malformed or unsafe schemes. */

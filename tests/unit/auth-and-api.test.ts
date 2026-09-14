@@ -94,6 +94,46 @@ describe("authentication and auth store", () => {
     expect(api.logout).toHaveBeenCalledOnce()
   })
 
+  it("reloads a session written by another extension document after an earlier signed-out read", async () => {
+    const values = new MemoryKeyValueStore()
+    const sessionStorage = new VersionedStorageNamespace({
+      key: "test.shared-auth",
+      currentVersion: 1,
+      schema: authSessionSchema,
+      store: values,
+      now: fixedClock.now,
+    })
+    const session = {
+      user: {
+        id: ids.user,
+        email: "person@example.com",
+        displayName: "Person",
+        role: "user" as const,
+        status: "active" as const,
+        emailVerified: true,
+        createdAt: fixedNow.toISOString(),
+        updatedAt: fixedNow.toISOString(),
+      },
+      tokens: {
+        accessToken: "access-token-written-in-dashboard",
+        refreshToken: "refresh-token-written-in-dashboard",
+        expiresAt: new Date(fixedNow.getTime() + 60_000).toISOString(),
+      },
+    }
+    const api = { me: vi.fn(() => Promise.resolve(session.user)) } as unknown as AuthApi
+    const service = new AuthService(api, sessionStorage, logger, fixedClock)
+
+    // This represents an open side panel or background worker before the dashboard login.
+    await expect(service.restoreSession()).resolves.toBeNull()
+    await sessionStorage.set(session)
+
+    await expect(service.restoreSession({ reloadStorage: true })).resolves.toMatchObject({
+      user: { email: "person@example.com" },
+      tokens: { accessToken: "access-token-written-in-dashboard" },
+    })
+    expect(api.me).toHaveBeenCalledOnce()
+  })
+
   it("surfaces safe login errors in the store", async () => {
     const error = new LuffyflowError({
       code: "AUTH_INVALID_CREDENTIALS",

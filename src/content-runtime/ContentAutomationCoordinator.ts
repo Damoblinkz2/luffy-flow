@@ -8,6 +8,7 @@ interface ActiveCommand {
   commandId: string
   controller: AbortController
   routeKey: string
+  adapterId: MessageOf<"prompt/submit">["payload"]["adapterId"]
 }
 
 /** Content coordination rejects stale leases and delegates every page operation to one adapter. */
@@ -57,6 +58,7 @@ export class ContentAutomationCoordinator {
       commandId: payload.commandId,
       controller,
       routeKey: contentRouteKey(currentUrl),
+      adapterId: payload.adapterId,
     }
     try {
       const context: SubmitPromptContext = {
@@ -122,9 +124,16 @@ export class ContentAutomationCoordinator {
     }
   }
 
-  /** SPA route changes cancel uncertain in-flight work instead of continuing on a stale DOM. */
+  /** SPA route changes cancel uncertain in-flight work, except an adapter's explicit safe transition. */
   handleNavigation(url: URL): void {
     if (this.active === null || this.active.routeKey === contentRouteKey(url)) return
+    const adapter = this.registry.get(this.active.adapterId)
+    if (adapter?.allowsGenerationRouteChange === true && adapter.isSupportedUrl(url)) {
+      // Gemini creates a conversation URL after sending the first prompt. Keep its command alive
+      // only while the new URL is still within the same adapter's strict supported-route policy.
+      this.active.routeKey = contentRouteKey(url)
+      return
+    }
     this.active.controller.abort(
       new DOMException(
         "The platform navigated while an LuffyFlow command was active.",

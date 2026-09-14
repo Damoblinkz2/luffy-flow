@@ -30,6 +30,8 @@ export interface PlatformAdapter {
   readonly id: SupportedPlatform
   readonly displayName: string
   readonly version: string
+  /** True only when a platform creates a conversation URL while an accepted response streams. */
+  readonly allowsGenerationRouteChange?: boolean
 
   isSupportedUrl(url: URL): boolean
   detectPageState(signal: AbortSignal): Promise<AdapterResult<PageState>>

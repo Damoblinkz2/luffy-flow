@@ -52,6 +52,14 @@ export const geminiSelectors = {
   ],
   generationBusyIndicator: [
     provisional(
+      'button[aria-label*="stop generating" i]',
+      "Gemini exposes an enabled Stop generating action while a streamed response is active.",
+    ),
+    provisional(
+      'button[aria-label*="stop response" i]',
+      "Gemini may label its active stream control Stop response.",
+    ),
+    provisional(
       'model-response[aria-busy="true"]',
       "The current model response may carry ARIA busy state.",
     ),

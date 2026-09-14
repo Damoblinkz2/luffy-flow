@@ -82,7 +82,7 @@ test("supported AI pages receive the in-page LuffyFlow launcher", async () => {
   const page = await context.newPage()
   // Fulfilling a supported origin locally keeps the test deterministic while still
   // exercising the browser's real content-script match and Shadow-DOM mount path.
-  await page.route("https://flow.google/**", (route) =>
+  await page.route("https://flow.google.com/**", (route) =>
     route.fulfill({
       contentType: "text/html",
       body: "<!doctype html><title>Google Flow test</title>",
@@ -93,18 +93,18 @@ test("supported AI pages receive the in-page LuffyFlow launcher", async () => {
   )
   // Google Flow uses client-side project routes rather than only its root URL.
   // This assertion protects recognition of the actual project workspace route.
-  await page.goto("https://flow.google/projects/browser-test")
+  await page.goto("https://flow.google.com/projects/browser-test")
   const flowLauncher = page.locator("#luffyflow-in-page-panel-host")
   await expect(flowLauncher).toHaveCount(1)
   await expect(flowLauncher.getByRole("button", { name: "Open LuffyFlow" })).toBeVisible()
   await page.goto("https://gemini.google.com/app")
   const launcher = page.locator("#luffyflow-in-page-panel-host")
   await expect(launcher).toHaveCount(1)
-  // The launcher must not cover the AI page. Clicking it delegates to Chrome's
-  // native, user-resizable side panel and reports the successful handoff.
+  // The launcher delegates to Chrome's native, user-resizable side panel, then hides so the
+  // platform page has one clear LuffyFlow entry point while the native panel is displayed.
   await expect(launcher.getByRole("button", { name: "Open LuffyFlow" })).toBeVisible()
   await launcher.getByRole("button", { name: "Open LuffyFlow" }).click()
-  await expect(launcher.getByRole("status")).toContainText("browser side panel")
+  await expect(launcher.getByRole("button", { name: "Open LuffyFlow" })).toHaveCount(0)
   await expect(launcher.getByText(/Something went wrong/i)).toHaveCount(0)
   await page.close()
 })

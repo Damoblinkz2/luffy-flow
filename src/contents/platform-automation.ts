@@ -17,6 +17,7 @@ import { registerContentHandlers } from "~/content-runtime/register-content-hand
 export const config: PlasmoCSConfig = {
   matches: [
     "https://flow.google/*",
+    "https://flow.google.com/*",
     "https://labs.google/fx/*",
     "https://www.labs.google/fx/*",
     "https://gemini.google.com/*",

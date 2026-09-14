@@ -7,6 +7,7 @@ import {
   outputRecordSchema,
   promptRecordSchema,
   queueStateSchema,
+  sidePanelVisibilitySchema,
 } from "~/schemas"
 import { PromptImportService } from "~/services/prompts/PromptImportService"
 
@@ -44,6 +45,13 @@ describe("runtime schemas and messages", () => {
         payload: { ...message.payload, delayMs: 5 },
       }).success,
     ).toBe(false)
+  })
+
+  it("accepts tab-specific native side-panel visibility updates", () => {
+    expect(sidePanelVisibilitySchema.parse({ visible: true, tabId: 123 })).toEqual({
+      visible: true,
+      tabId: 123,
+    })
   })
 
   it("adds safe Meta AI adapter defaults to settings saved before platform support", () => {

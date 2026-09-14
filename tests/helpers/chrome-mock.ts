@@ -3,6 +3,7 @@ import { vi } from "vitest"
 export interface ChromeMockControls {
   downloadRequests: chrome.downloads.DownloadOptions[]
   emitDownloadChanged(delta: chrome.downloads.DownloadDelta): void
+  emitStorageChanged(changes: Record<string, chrome.storage.StorageChange>, areaName?: string): void
   storedValues: Map<string, unknown>
 }
 
@@ -13,6 +14,9 @@ export const createChromeMock = (): ChromeMock => {
   const storedValues = new Map<string, unknown>()
   const downloadRequests: chrome.downloads.DownloadOptions[] = []
   const downloadListeners = new Set<(delta: chrome.downloads.DownloadDelta) => void>()
+  const storageChangeListeners = new Set<
+    (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void
+  >()
   let nextDownloadId = 1
 
   const controls: ChromeMockControls = {
@@ -20,6 +24,11 @@ export const createChromeMock = (): ChromeMock => {
     storedValues,
     emitDownloadChanged: (delta) => {
       for (const listener of downloadListeners) listener(delta)
+    },
+    // Tests can model a login occurring in a separate extension document without coupling the
+    // mock's low-level storage writes to React's asynchronous update lifecycle.
+    emitStorageChanged: (changes, areaName = "local") => {
+      for (const listener of storageChangeListeners) listener(changes, areaName)
     },
   }
 
@@ -33,6 +42,24 @@ export const createChromeMock = (): ChromeMock => {
       onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
     },
     storage: {
+      onChanged: {
+        addListener: vi.fn(
+          (
+            listener: (
+              changes: Record<string, chrome.storage.StorageChange>,
+              areaName: string,
+            ) => void,
+          ) => storageChangeListeners.add(listener),
+        ),
+        removeListener: vi.fn(
+          (
+            listener: (
+              changes: Record<string, chrome.storage.StorageChange>,
+              areaName: string,
+            ) => void,
+          ) => storageChangeListeners.delete(listener),
+        ),
+      },
       local: {
         get: vi.fn((key: string, callback?: (items: Record<string, unknown>) => void) => {
           const items = storedValues.has(key) ? { [key]: storedValues.get(key) } : {}

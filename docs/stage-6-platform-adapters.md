@@ -11,9 +11,9 @@ owners. Consequently, **no Stage 6 DOM selector is claimed as verified**. Every 
 is marked `provisional` or `fallback`, and every maintenance note begins with `UNVERIFIED` plus the
 review date. Generated class names are intentionally avoided.
 
-Official public endpoints were checked on 2026-08-03:
+Official public endpoints were checked on 2026-09-14:
 
-- Google Flow: <https://flow.google/> redirects to <https://labs.google/fx/tools/flow>.
+- Google Flow: <https://flow.google/> redirects to <https://flow.google.com/>.
 - Gemini web app: <https://gemini.google.com/app>.
 - Standalone Grok: <https://grok.com/>; X also documents Grok access through its web navigation.
 

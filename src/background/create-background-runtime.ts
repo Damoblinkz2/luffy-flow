@@ -5,7 +5,11 @@ import { listenForRuntimeMessages, TabMessageTransport } from "~/messaging/runti
 import { TypedMessageClient } from "~/messaging/client"
 import { TypedMessageRouter } from "~/messaging/router"
 import type { QueueState } from "~/schemas"
-import { platformStatusSnapshotSchema, sidePanelOpenResultSchema } from "~/schemas"
+import {
+  platformStatusSnapshotSchema,
+  sidePanelOpenResultSchema,
+  sidePanelVisibilitySchema,
+} from "~/schemas"
 import { createApplicationServices } from "~/services/create-application-services"
 import { DownloadService } from "~/services/downloads/DownloadService"
 
@@ -19,7 +23,9 @@ export interface BackgroundRuntime {
 export const createBackgroundRuntime = (): BackgroundRuntime => {
   const services = createApplicationServices()
   const getAuthenticatedUserId = async (): Promise<string> => {
-    const session = await services.authService.restoreSession()
+    // The service worker can outlive the dashboard that performed login. Reload the shared
+    // session first so a previous cached `null` never blocks the user's first queue start.
+    const session = await services.authService.restoreSession({ reloadStorage: true })
     if (session === null) {
       throw new LuffyflowError({
         code: "AUTH_REQUIRED",
@@ -30,6 +36,7 @@ export const createBackgroundRuntime = (): BackgroundRuntime => {
     return session.user.id
   }
   const router = new TypedMessageRouter("background")
+  let nativeSidePanelTabId: number | undefined
   const coordinator = new BackgroundQueueCoordinator({
     queueService: services.queueService,
     queues: services.repositories.queue,
@@ -110,7 +117,25 @@ export const createBackgroundRuntime = (): BackgroundRuntime => {
       // The click originates in the content-script launcher, so Chrome treats
       // this as a user gesture and opens a native, browser-resizable side panel.
       await chrome.sidePanel.open({ tabId })
+      nativeSidePanelTabId = tabId
       return sidePanelOpenResultSchema.parse({ opened: true })
+    },
+  )
+  const unregisterSidePanelVisibilityHandler = router.register(
+    "sidepanel/visibility",
+    ["sidepanel"],
+    async (message) => {
+      // Prefer the tab resolved by the side-panel document. This also covers a panel opened from
+      // Chrome's extension menu, where no in-page launcher request established a tab ID first.
+      const tabId = message.payload.tabId ?? nativeSidePanelTabId ?? (await activeTabId())
+      await new TypedMessageClient("background", new TabMessageTransport(tabId)).send({
+        kind: "sidepanel/visibility/changed",
+        target: "content",
+        payload: message.payload,
+        responseSchema: sidePanelVisibilitySchema,
+      })
+      nativeSidePanelTabId = message.payload.visible ? tabId : undefined
+      return message.payload
     },
   )
   const stopListening = listenForRuntimeMessages((message, sender) => router.route(message, sender))
@@ -125,6 +150,7 @@ export const createBackgroundRuntime = (): BackgroundRuntime => {
       unregisterDownloadHandlers()
       unregisterPlatformHandler()
       unregisterSidePanelHandler()
+      unregisterSidePanelVisibilityHandler()
       unregisterHandlers()
       downloadService.dispose()
       services.dispose()

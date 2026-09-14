@@ -60,9 +60,17 @@ export class AuthService implements AuthTokenProvider {
     return this.api.forgotPassword({ email })
   }
 
-  /** Restoration verifies a valid cached session and refreshes expired access tokens. */
-  async restoreSession(): Promise<AuthSession | null> {
-    const session = await this.ensureHydrated()
+  /**
+   * Restoration verifies a valid cached session and refreshes expired access tokens.
+   *
+   * `reloadStorage` is used by long-lived extension contexts, such as the service worker,
+   * after another extension document has just completed a login. Without it, a worker that
+   * previously observed no session would continue using its intentionally cached `null` value.
+   */
+  async restoreSession(options: { reloadStorage?: boolean } = {}): Promise<AuthSession | null> {
+    const session = options.reloadStorage
+      ? await this.synchronizeSession()
+      : await this.ensureHydrated()
     if (session === null) return null
     if (this.isExpiring(session)) return this.refreshSession()
 
@@ -106,6 +114,26 @@ export class AuthService implements AuthTokenProvider {
 
   /** Exposes the already-hydrated in-memory session without performing storage I/O. */
   getCurrentSession(): AuthSession | null {
+    return this.session
+  }
+
+  /**
+   * Re-reads the shared extension session without calling the API or writing storage.
+   *
+   * UI documents call this after `chrome.storage.onChanged` so a dashboard login, logout, or
+   * token rotation becomes visible everywhere without creating a storage-event feedback loop.
+   */
+  async synchronizeSession(): Promise<AuthSession | null> {
+    // Let an in-flight refresh finish first so the subsequent read observes its final result.
+    if (this.refreshOperation !== null) {
+      try {
+        await this.refreshOperation
+      } catch {
+        // Refresh failures clear storage below in refreshSession; the authoritative read still wins.
+      }
+    }
+    this.session = await this.sessionStorage.get()
+    this.hydrated = true
     return this.session
   }
 

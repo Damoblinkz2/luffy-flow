@@ -1,5 +1,5 @@
 import { ObservedPlatformAdapter } from "~/adapters/shared/ObservedPlatformAdapter"
-import { detectTextOutput } from "~/adapters/shared/output-extraction"
+import { detectMediaOutput, detectTextOutput } from "~/adapters/shared/output-extraction"
 import { applySelectorOverrides } from "~/adapters/selector-overrides"
 import type { AdapterSelectorConfig } from "~/adapters/contracts"
 import type { DetectedOutput, PlatformAdapterSettings } from "~/schemas"
@@ -10,7 +10,10 @@ import { geminiSelectors, geminiTextSignals } from "./selectors"
 export class GeminiAdapter extends ObservedPlatformAdapter {
   override readonly id = "gemini" as const
   override readonly displayName = "Google Gemini"
-  override readonly version = "0.1.0-provisional.1"
+  override readonly version = "0.1.0-provisional.2"
+  // Gemini commonly turns a new chat into a conversation URL while it is generating.
+  // That same supported-route transition must not be treated as a user cancellation.
+  override readonly allowsGenerationRouteChange = true
   protected override readonly selectors: AdapterSelectorConfig
   protected override readonly textSignals = geminiTextSignals
 
@@ -26,8 +29,8 @@ export class GeminiAdapter extends ObservedPlatformAdapter {
     return url.pathname === "/" || /^\/(?:u\/\d+\/)?app(?:\/|$)/.test(url.pathname)
   }
 
-  /** Converts the latest Gemini response container into a normalized text output. */
+  /** Captures native generated media before falling back to Gemini's textual response. */
   protected override detectOutput(element: HTMLElement): DetectedOutput | null {
-    return detectTextOutput(element)
+    return detectMediaOutput(element) ?? detectTextOutput(element)
   }
 }

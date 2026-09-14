@@ -142,7 +142,7 @@ Create an account against the configured backend and sign in with those credenti
 
 Navigate to an authenticated supported route:
 
-- `https://flow.google/` or the Google Labs Flow route
+- `https://flow.google.com/` (the former `flow.google` alias also works) or the Google Labs Flow route
 - `https://gemini.google.com/` or `/app/...`
 - `https://grok.com/`
 - `https://x.com/i/grok`

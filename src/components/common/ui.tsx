@@ -98,7 +98,15 @@ export const EmptyState = ({
 )
 
 /** Presents a recoverable region-level failure without replacing the surrounding page. */
-export const ErrorState = ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
+export const ErrorState = ({
+  message,
+  onRetry,
+  action,
+}: {
+  message: string
+  onRetry?: () => void
+  action?: ReactNode
+}) => (
   <div
     className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
     role="alert"
@@ -109,6 +117,7 @@ export const ErrorState = ({ message, onRetry }: { message: string; onRetry?: ()
         Try again
       </Button>
     )}
+    {action === undefined ? null : <div className="mt-2">{action}</div>}
   </div>
 )
 

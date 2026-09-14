@@ -367,11 +367,10 @@ export class BackgroundQueueCoordinator {
           userMessage: "LuffyFlow could not complete this prompt.",
           recoverable: true,
         })
-        const shouldPause =
-          normalized.code === "RATE_LIMITED" ||
-          normalized.code === "SERVICE_UNAVAILABLE" ||
-          normalized.category === "authorization" ||
-          normalized.category === "platform_unsupported"
+        // A command with no captured final output is never safe to skip past automatically.
+        // Pause for explicit user review/retry so the next prompt cannot overlap a still-running
+        // generation or silently leave an incomplete response behind.
+        const shouldPause = true
         const latestPromptQueue = await this.options.queues.getActive()
         if (!this.haltRequested && latestPromptQueue?.status === "running") {
           await this.options.queueService.failPrompt(

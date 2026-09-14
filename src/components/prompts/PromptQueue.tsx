@@ -11,6 +11,7 @@ import {
 import type { ActivePlatformSnapshot } from "~/hooks/useActivePlatform"
 import type { QueueWorkspace } from "~/hooks/useQueueWorkspace"
 import type { PromptRecord, PromptStatus } from "~/schemas"
+import { openDashboard } from "~/utils/extension-navigation"
 
 export interface PromptQueueProps {
   workspace: QueueWorkspace
@@ -76,7 +77,23 @@ export const PromptQueue = ({ workspace, activePlatform }: PromptQueueProps) => 
       </div>
 
       {workspace.error === null ? null : (
-        <ErrorState message={workspace.error} onRetry={() => void workspace.refresh()} />
+        <ErrorState
+          message={workspace.error}
+          onRetry={() => void workspace.refresh()}
+          action={
+            workspace.authenticationRequired ? (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  // Keep the queue intact and open the durable login surface in a new tab.
+                  void openDashboard("/login")
+                }}
+              >
+                Open login
+              </Button>
+            ) : undefined
+          }
+        />
       )}
       {queue?.pauseReason === undefined ? null : (
         <p className="rounded-xl bg-amber-500/10 p-3 text-sm" role="status">
@@ -189,7 +206,17 @@ const PromptQueueItem = ({
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [text, setText] = useState(prompt.text)
   const editable = prompt.status === "draft" || prompt.status === "queued"
-  const run = (operation: () => Promise<void>): void => void operation().catch(() => undefined)
+  const run = (operation: () => Promise<void>, source?: HTMLElement): void => {
+    // Queue state is refreshed after a retry. Preserve every scrolling ancestor of the pressed
+    // control so React's rerender cannot jump the side-panel user back to its first prompt.
+    const restoreScroll = captureScrollPosition(source)
+    void operation()
+      .catch(() => undefined)
+      .finally(() => {
+        restoreScroll()
+        globalThis.requestAnimationFrame?.(restoreScroll)
+      })
+  }
 
   return (
     <li className="rounded-xl border p-3">
@@ -277,7 +304,11 @@ const PromptQueueItem = ({
           </>
         ) : null}
         {prompt.status === "failed" ? (
-          <Button variant="secondary" disabled={busy} onClick={() => run(onRetry)}>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={(event) => run(onRetry, event.currentTarget)}
+          >
             Retry
           </Button>
         ) : null}
@@ -301,4 +332,25 @@ const PromptQueueItem = ({
       />
     </li>
   )
+}
+
+/** Records document and nested panel offsets before an asynchronous queue operation changes the DOM. */
+const captureScrollPosition = (source?: HTMLElement): (() => void) => {
+  const scrollOffsets = new Map<Element, { left: number; top: number }>()
+  let current: HTMLElement | null | undefined = source
+  while (current !== null && current !== undefined) {
+    if (current.scrollHeight > current.clientHeight || current.scrollWidth > current.clientWidth) {
+      scrollOffsets.set(current, { left: current.scrollLeft, top: current.scrollTop })
+    }
+    current = current.parentElement
+  }
+  const root = document.scrollingElement
+  if (root !== null) scrollOffsets.set(root, { left: root.scrollLeft, top: root.scrollTop })
+  return () => {
+    for (const [element, offset] of scrollOffsets) {
+      const scrollElement = element as HTMLElement
+      scrollElement.scrollLeft = offset.left
+      scrollElement.scrollTop = offset.top
+    }
+  }
 }

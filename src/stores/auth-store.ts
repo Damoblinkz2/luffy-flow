@@ -13,6 +13,7 @@ export interface AuthStoreState {
   error: string | null
   notice: string | null
   restore(): Promise<void>
+  synchronize(): Promise<void>
   login(request: LoginRequest): Promise<void>
   signup(request: SignupRequest): Promise<void>
   logout(): Promise<void>
@@ -31,6 +32,21 @@ export const createAuthStore = (service: AuthService): StoreApi<AuthStoreState> 
       set({ status: "loading", error: null })
       try {
         const session = await service.restoreSession()
+        set({
+          session,
+          status: session === null ? "unauthenticated" : "authenticated",
+          error: null,
+        })
+      } catch (error) {
+        set({ status: "unauthenticated", session: null, error: messageFromError(error) })
+      }
+    },
+    // Storage change events use this lightweight path so another extension document's login
+    // is reflected here without issuing a second `/auth/me` request or rewriting the session.
+    synchronize: async () => {
+      set({ status: "loading", error: null })
+      try {
+        const session = await service.synchronizeSession()
         set({
           session,
           status: session === null ? "unauthenticated" : "authenticated",

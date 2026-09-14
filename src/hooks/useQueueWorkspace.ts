@@ -21,6 +21,7 @@ export interface QueueWorkspace {
   loading: boolean
   busy: boolean
   error: string | null
+  authenticationRequired: boolean
   refresh(): Promise<void>
   addDrafts(input: {
     texts: string[]
@@ -52,6 +53,7 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [authenticationRequired, setAuthenticationRequired] = useState(false)
 
   const hydrate = useCallback(
     async (nextQueue?: QueueState | null): Promise<void> => {
@@ -75,8 +77,10 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
     try {
       await hydrate()
       setError(null)
+      setAuthenticationRequired(false)
     } catch (caught) {
       setError(messageFromError(caught))
+      setAuthenticationRequired(isAuthenticationError(caught))
     } finally {
       setLoading(false)
     }
@@ -105,11 +109,13 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
     async (operation: () => Promise<QueueState | PromptRecord>): Promise<void> => {
       setBusy(true)
       setError(null)
+      setAuthenticationRequired(false)
       try {
         const result = await operation()
         await hydrate("promptIds" in result ? result : undefined)
       } catch (caught) {
         setError(messageFromError(caught))
+        setAuthenticationRequired(isAuthenticationError(caught))
         throw caught
       } finally {
         setBusy(false)
@@ -316,6 +322,7 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
     loading,
     busy,
     error,
+    authenticationRequired,
     refresh,
     addDrafts,
     start,
@@ -327,7 +334,10 @@ export const useQueueWorkspace = (source: QueueUiSource): QueueWorkspace => {
     movePrompt,
     retryPrompt,
     skipPrompt,
-    clearError: () => setError(null),
+    clearError: () => {
+      setError(null)
+      setAuthenticationRequired(false)
+    },
   }
 }
 
@@ -338,3 +348,7 @@ const messageFromError = (error: unknown): string =>
     : error instanceof Error
       ? error.message
       : "LuffyFlow could not update the queue."
+
+/** Authentication failures are actionable: the queue can send the user to the dashboard login. */
+const isAuthenticationError = (error: unknown): boolean =>
+  error instanceof LuffyflowError && error.category === "authentication"

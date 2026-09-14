@@ -1,20 +1,28 @@
 import { describe, expect, it, vi } from "vitest"
 
-import type { PlatformAdapter } from "~/adapters/contracts"
+import type {
+  AdapterSelectorConfig,
+  AdapterTextSignals,
+  PlatformAdapter,
+} from "~/adapters/contracts"
 import { GeminiAdapter } from "~/adapters/gemini/GeminiAdapter"
 import { GoogleFlowAdapter } from "~/adapters/google-flow/GoogleFlowAdapter"
+import { googleFlowSelectors } from "~/adapters/google-flow/selectors"
 import { GrokAdapter } from "~/adapters/grok/GrokAdapter"
 import { MetaAiAdapter } from "~/adapters/meta-ai/MetaAiAdapter"
 import { PlatformAdapterRegistry } from "~/adapters/registry"
+import { ObservedPlatformAdapter } from "~/adapters/shared/ObservedPlatformAdapter"
 import { queryAll, queryFirst } from "~/adapters/shared/dom-query"
+import { waitForDomStability } from "~/adapters/shared/dom-stability"
 import { detectMediaOutput, detectTextOutput } from "~/adapters/shared/output-extraction"
+import type { DetectedOutput } from "~/schemas"
 
 describe("supported platform URLs", () => {
   it.each([
     [
       new GoogleFlowAdapter(),
-      "https://flow.google/projects/example-session",
-      "https://flow.google.evil.example/projects/example-session",
+      "https://flow.google.com/projects/example-session",
+      "https://flow.google.com.evil.example/projects/example-session",
     ],
     [new GeminiAdapter(), "https://gemini.google.com/app/abc", "http://gemini.google.com/app"],
     [new GrokAdapter(), "https://x.com/i/grok", "https://x.com/home"],
@@ -27,6 +35,9 @@ describe("supported platform URLs", () => {
 
   it("recognizes the current localized Google Labs Flow route", () => {
     const adapter = new GoogleFlowAdapter()
+    expect(adapter.isSupportedUrl(new URL("https://flow.google/projects/legacy-session"))).toBe(
+      true,
+    )
     expect(adapter.isSupportedUrl(new URL("https://www.labs.google/fx/ko/tools/flow"))).toBe(true)
     expect(adapter.isSupportedUrl(new URL("https://www.labs.google/fx/ko/tools/other"))).toBe(false)
     adapter.dispose()
@@ -62,6 +73,16 @@ describe("supported platform URLs", () => {
 })
 
 describe("adapter DOM utilities", () => {
+  it("treats an interactive workspace as ready while its prompt editor is still being discovered", async () => {
+    const adapter = new ReadinessProbeAdapter()
+
+    await expect(adapter.detectPageState(new AbortController().signal)).resolves.toMatchObject({
+      ok: true,
+      value: { readiness: "ready" },
+    })
+    adapter.dispose()
+  })
+
   it("uses selector fallbacks and de-duplicates matching nodes", () => {
     document.body.innerHTML = '<div class="answer" data-testid="answer">Done</div>'
     const candidates = [
@@ -77,6 +98,14 @@ describe("adapter DOM utilities", () => {
 
     expect(queryFirst(document, candidates)?.candidateIndex).toBe(1)
     expect(queryAll(document, candidates)).toHaveLength(1)
+  })
+
+  it("prioritizes Google Flow's standard generation prompt textarea", () => {
+    document.body.innerHTML = '<textarea id="PINHOLE_TEXT_AREA_ELEMENT_ID"></textarea>'
+
+    expect(queryFirst(document, googleFlowSelectors.promptInput)?.element).toBe(
+      document.querySelector("#PINHOLE_TEXT_AREA_ELEMENT_ID"),
+    )
   })
 
   it("extracts bounded text and safe HTTP media metadata", () => {
@@ -107,5 +136,71 @@ describe("adapter DOM utilities", () => {
       fileExtension: ".wav",
       mimeType: "audio/wav",
     })
+
+    const generatedImageWithCaption = document.createElement("article")
+    generatedImageWithCaption.innerHTML =
+      '<p>Your image is ready.</p><img src="https://cdn.example.test/scene.webp" aria-label="Generated scene">'
+    expect(detectTextOutput(generatedImageWithCaption)).toMatchObject({
+      type: "image",
+      sourceUrl: "https://cdn.example.test/scene.webp",
+      fileExtension: ".webp",
+    })
+
+    const firstRepeatedAnswer = document.createElement("article")
+    const secondRepeatedAnswer = document.createElement("article")
+    firstRepeatedAnswer.textContent = "An identical generated answer"
+    secondRepeatedAnswer.textContent = "An identical generated answer"
+    expect(detectTextOutput(firstRepeatedAnswer)?.fingerprintSource).not.toBe(
+      detectTextOutput(secondRepeatedAnswer)?.fingerprintSource,
+    )
+  })
+
+  it("ignores ongoing response-control attribute changes while waiting for generated content", async () => {
+    vi.useFakeTimers()
+    try {
+      const response = document.createElement("article")
+      document.body.append(response)
+      const wait = waitForDomStability(response, 500, 5_000, new AbortController().signal)
+
+      // Gemini updates button ARIA attributes after a response is complete. Those controls are not
+      // generated content and must not prevent the queue from recording the finished prompt.
+      response.setAttribute("data-live-control-state", "updated")
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(500)
+
+      await expect(wait).resolves.toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
+
+/** A selector-free adapter isolates generic readiness behavior from live platform DOM changes. */
+class ReadinessProbeAdapter extends ObservedPlatformAdapter {
+  override readonly id = "gemini" as const
+  override readonly displayName = "Readiness probe"
+  override readonly version = "test"
+  protected override readonly selectors: AdapterSelectorConfig = {
+    promptInput: [],
+    submitButton: [],
+    stopButton: [],
+    generationBusyIndicator: [],
+    outputContainer: [],
+    authenticationRequiredIndicator: [],
+    rateLimitIndicator: [],
+    serviceUnavailableIndicator: [],
+  }
+  protected override readonly textSignals: AdapterTextSignals = {
+    authenticationRequired: [],
+    rateLimited: [],
+    serviceUnavailable: [],
+  }
+
+  override isSupportedUrl(): boolean {
+    return true
+  }
+
+  protected override detectOutput(): DetectedOutput | null {
+    return null
+  }
+}

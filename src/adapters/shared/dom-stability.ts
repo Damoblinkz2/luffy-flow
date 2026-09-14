@@ -1,4 +1,4 @@
-/** DOM stability waits for a quiet mutation window and always disconnects its observer. */
+/** DOM stability waits for response-content changes, ignoring live UI attribute churn. */
 export const waitForDomStability = (
   root: Node,
   quietMs: number,
@@ -43,7 +43,6 @@ export const waitForDomStability = (
     observer.observe(root, {
       childList: true,
       subtree: true,
-      attributes: true,
       characterData: true,
     })
     scheduleQuiet()

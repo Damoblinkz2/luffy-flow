@@ -30,6 +30,10 @@ interface AdapterFaultOptions {
   selectorKey?: string
 }
 
+// A completed response must remain quiet for this window before a queue can advance.
+// This prevents a newly-created streaming response node from being captured as final output.
+const GENERATION_COMPLETION_QUIET_MS = 2_500
+
 /** Internal faults retain typed adapter codes without leaking raw DOM or prompt content. */
 class AdapterFault extends Error {
   readonly code: AdapterErrorCode
@@ -53,6 +57,8 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
   abstract readonly id: SupportedPlatform
   abstract readonly displayName: string
   abstract readonly version: string
+  /** Individual adapters opt in only for documented, same-platform conversation URL changes. */
+  readonly allowsGenerationRouteChange: boolean = false
   protected abstract readonly selectors: AdapterSelectorConfig
   protected abstract readonly textSignals: AdapterTextSignals
 
@@ -75,7 +81,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
       "The platform page state could not be detected.",
       () => {
         const url = this.currentUrl()
-        const generationInProgress = this.hasVisible(this.selectors.generationBusyIndicator)
+        const generationInProgress = this.hasActiveGenerationIndicator()
         const readiness = this.readiness(url, generationInProgress)
         return {
           readiness,
@@ -143,7 +149,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
       async (linked) => {
         const url = this.assertSupportedRoute()
         this.assertNoBlockingStatus()
-        if (this.hasVisible(this.selectors.generationBusyIndicator)) {
+        if (this.hasActiveGenerationIndicator()) {
           throw new AdapterFault({
             code: "generation_in_progress",
             message: "A platform generation is already in progress.",
@@ -185,7 +191,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
           evaluate: () => {
             this.assertSubmissionRoute()
             this.assertNoBlockingStatus()
-            if (this.hasVisible(this.selectors.generationBusyIndicator)) return true
+            if (this.hasActiveGenerationIndicator()) return true
             return this.latestNewOutput() === null ? null : true
           },
         })
@@ -193,7 +199,7 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
     )
   }
 
-  /** Waits for busy indicators to settle and a stable, previously unseen output to appear. */
+  /** Waits for busy indicators to settle and an unchanged, previously unseen output to appear. */
   waitForGenerationComplete(
     context: SubmitPromptContext,
     signal: AbortSignal,
@@ -203,25 +209,35 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
       "generation_complete_timeout",
       "The platform generation did not complete within the configured timeout.",
       async (linked) => {
-        const completed = await waitForCondition<OutputMatch>({
-          root: document,
-          timeoutMs: context.generationCompleteTimeoutMs,
-          signal: linked,
-          evaluate: () => {
-            this.assertSubmissionRoute()
-            this.assertNoBlockingStatus()
-            if (this.hasVisible(this.selectors.generationBusyIndicator)) return null
-            return this.latestNewOutput()
-          },
-        })
+        const deadline = Date.now() + context.generationCompleteTimeoutMs
+        while (true) {
+          const completed = await waitForCondition<OutputMatch>({
+            root: document,
+            timeoutMs: remainingGenerationTime(deadline),
+            signal: linked,
+            evaluate: () => {
+              this.assertSubmissionRoute()
+              this.assertNoBlockingStatus()
+              if (this.hasActiveGenerationIndicator()) return null
+              return this.latestNewOutput()
+            },
+          })
 
-        // A short quiet window reduces partial text capture without blocking forever on animated pages.
-        try {
-          await waitForDomStability(completed.element, 400, 3_000, linked)
-        } catch (error) {
-          if (linked.aborted) throw error
+          // Streaming UIs often create an answer node before its content is finished. Do not
+          // ignore an unstable DOM: stay with this command until the response is quiet, or fail
+          // safely at the configured timeout so the queue cannot submit the next prompt early.
+          await waitForDomStability(
+            completed.element,
+            GENERATION_COMPLETION_QUIET_MS,
+            remainingGenerationTime(deadline),
+            linked,
+          )
+          this.assertSubmissionRoute()
+          this.assertNoBlockingStatus()
+          if (this.hasActiveGenerationIndicator()) continue
+          const latest = this.latestNewOutput()
+          if (latest?.element === completed.element) return latest.detected
         }
-        return this.latestNewOutput()?.detected ?? completed.detected
       },
     )
   }
@@ -342,8 +358,11 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
       return "authentication_required"
     }
     if (generationInProgress) return "generation_in_progress"
-    if (document.readyState === "loading") return "loading"
-    return this.hasVisible(this.selectors.promptInput) ? "ready" : "loading"
+    if (document.readyState === "loading" || document.body === null) return "loading"
+    // Modern Flow workspaces render their editable prompt region after the shell becomes
+    // interactive. The actual submit path waits for that control for up to ten seconds, so an
+    // initially unfamiliar selector must not be misreported as a page that is still loading.
+    return "ready"
   }
 
   /** Extracts normalized outputs from candidate containers and drops false-positive nodes. */
@@ -376,6 +395,13 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
   /** Tests whether any selector candidate resolves to a currently visible element. */
   private hasVisible(candidates: AdapterSelectorConfig[keyof AdapterSelectorConfig]): boolean {
     return queryAll<HTMLElement>(document, candidates).some(({ element }) => isVisible(element))
+  }
+
+  /** Treats visible but disabled historic Stop controls as inactive so later prompts can finish. */
+  private hasActiveGenerationIndicator(): boolean {
+    return queryAll<HTMLElement>(document, this.selectors.generationBusyIndicator).some(
+      ({ element }) => isVisibleAndEnabled(element),
+    )
   }
 
   /** Matches normalized visible status text against platform-specific phrases. */
@@ -437,6 +463,10 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
   private assertSubmissionRoute(): void {
     const url = this.assertSupportedRoute()
     if (this.submissionRouteKey !== null && routeKey(url) !== this.submissionRouteKey) {
+      if (this.allowsGenerationRouteChange) {
+        this.submissionRouteKey = routeKey(url)
+        return
+      }
       throw new AdapterFault({
         code: "navigation_changed",
         message: "The platform route changed while generation was active.",
@@ -523,6 +553,13 @@ export abstract class ObservedPlatformAdapter implements PlatformAdapter {
 
 /** Tracks SPA route changes without treating harmless query-string updates as navigation. */
 const routeKey = (url: URL): string => `${url.hostname}${url.pathname}${url.hash}`
+
+/** Bounds every completion wait by the user's configured generation-complete timeout. */
+const remainingGenerationTime = (deadline: number): number => {
+  const remaining = deadline - Date.now()
+  if (remaining > 0) return remaining
+  throw new DOMException("The platform generation did not complete in time.", "TimeoutError")
+}
 
 /** Iterates selector groups without losing their precise configuration key types. */
 const selectorEntries = (config: AdapterSelectorConfig) =>

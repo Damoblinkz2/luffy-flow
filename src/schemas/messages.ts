@@ -43,6 +43,11 @@ const messageErrorSchema = serializedLuffyflowErrorSchema.pick({
 
 /** A successful native-panel request carries no page data back into the content script. */
 export const sidePanelOpenResultSchema = z.object({ opened: z.literal(true) })
+/** Reports native-panel visibility and, when available, the platform tab it belongs to. */
+export const sidePanelVisibilitySchema = z.object({
+  visible: z.boolean(),
+  tabId: z.number().int().nonnegative().optional(),
+})
 
 /** The discriminated union is the runtime trust boundary for extension messaging. */
 export const extensionMessageSchema = z.discriminatedUnion("kind", [
@@ -69,6 +74,8 @@ export const extensionMessageSchema = z.discriminatedUnion("kind", [
     }),
   ),
   createMessageSchema("sidepanel/open", z.object({}).strict()),
+  createMessageSchema("sidepanel/visibility", sidePanelVisibilitySchema),
+  createMessageSchema("sidepanel/visibility/changed", sidePanelVisibilitySchema),
   createMessageSchema(
     "queue/create",
     z.object({
